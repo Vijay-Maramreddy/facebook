@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "957475916382",
+    "project_id": "flutter-facebook-4c58a",
+    "storage_bucket": "flutter-facebook-4c58a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:957475916382:android:f9896d91c04bff4080c2cf",
+        "android_client_info": {
+          "package_name": "com.example.facebook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfHIkLG2__FKCn3LIDO1wjc4XPh3GP2nQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
