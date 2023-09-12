@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/Authentication/create_account_page.dart';
+import 'package:facebook/home/home_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import 'Authentication/password_reset.dart';
 
 Future main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +31,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return openScreen();
+    return const openScreen();
   }
 }
 
@@ -58,7 +62,7 @@ class _openScreenState extends State<openScreen> {
                 // crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    padding: EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
                     width: 600,
                     height: 500,
                     alignment: Alignment.center,
@@ -74,9 +78,8 @@ class _openScreenState extends State<openScreen> {
                         ),
                       ],
                     ),
-
                   ),
-                  SizedBox(width: 60,),
+                  const SizedBox(width: 60,),
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(
@@ -149,13 +152,14 @@ class _openScreenState extends State<openScreen> {
                           margin: const EdgeInsets.all(10),
                           alignment: Alignment.center,
                           padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+
                           child: TextButton(
-                            onPressed: (){},
+                            onPressed: (){getUserDataByEmail(_emailController.text,_passwordController.text);},
                             child:const  Text("Login",style: TextStyle(color: Colors.white,fontSize: 24),),
                           )
                         ),
                         Container(
-                          child: TextButton(child: const Text("Forgotten Password?"),onPressed: (){}),
+                          child: TextButton(child: const Text("Forgotten Password?"),onPressed: (){Navigator.push(context, MaterialPageRoute(builder: (context)=>PasswordReset()));}),
                         ),
                         const Divider(
                           color: Colors.black12, // You can customize the color here
@@ -180,7 +184,7 @@ class _openScreenState extends State<openScreen> {
                                   Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => CreateAccount(),
+                                    builder: (context) => const CreateAccount(),
                                   ),
                                 );
                                   },
@@ -198,6 +202,50 @@ class _openScreenState extends State<openScreen> {
       ) ,
     );
   }
+
+  // void getUserDataByEmail(TextEditingController email, TextEditingController password) {
+
+    Future<void> getUserDataByEmail(String email, String password) async {
+      try {
+        // Reference the Firestore collection where user data is stored
+        CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+
+        // Query the collection to find documents that match the provided mobile number
+        QuerySnapshot querySnapshot = await usersCollection.where('email', isEqualTo: email).get();
+
+        // Check if any documents match the query
+        if (querySnapshot.docs.isNotEmpty) {
+          // Access user data (in this example, we assume only one user matches the mobile number)
+          DocumentSnapshot userDocument = querySnapshot.docs.first;
+          Map<String, dynamic> userData = userDocument.data() as Map<String, dynamic>;
+
+          // You can now use the userData map to access user details
+          String password = userData['password'];
+          print(password);
+          if(password==password){
+            Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen()));
+          }
+          else{
+            print("password missmatch");
+          }
+          // String firstName = userData['firstName'];
+          // String lastName = userData['lastName'];
+          // String email = userData['email'];
+          //
+          // // // Use the user data as needed
+          // print('First Name: $firstName');
+          // print('Last Name: $lastName');
+          // print('Email: $email');
+        } else {
+          // No user found with the provided mobile number
+          print('User not found');
+        }
+      } catch (e) {
+        print('Error: $e');
+      }
+    }
+
+
 }
 
 
