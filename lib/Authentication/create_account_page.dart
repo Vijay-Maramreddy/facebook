@@ -89,20 +89,30 @@ class _CreateAccountState extends State<CreateAccount> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'Enter Your Mobile Number',
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 50),
+                'Enter Your Mobile Number',
+                style: TextStyle(fontSize: 18),
+              textAlign: TextAlign.left,
+              ),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                    color: Colors.black
+                ),
+                borderRadius: BorderRadius.circular(10),
+                color: Colors.white,
+              ),
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding:const EdgeInsets.fromLTRB(10, 10, 10, 0),
               child: TextField(
                 controller: _phoneNumberController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                  labelText: 'Mobile Number',
+                  labelText: "Mobile Number",
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
             Visibility(
               visible: !_otpSent, // Show "Send OTP" button if OTP is not sent
@@ -116,22 +126,26 @@ class _CreateAccountState extends State<CreateAccount> {
             if (_otpSent) // Show OTP field only if OTP has been sent
               Column(
                 children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Enter OTP sent to your mobile number',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  const SizedBox(height: 20),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 50),
-                    child: TextField(
-                      controller: _otpController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'OTP',
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: Colors.black
                       ),
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white,
                     ),
+                    margin: const EdgeInsets.all(10),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                      child:TextField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'OTP',
+                        ),
+                      ),
                   ),
+
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {

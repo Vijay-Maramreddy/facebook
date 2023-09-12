@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../basepage.dart';
 import '../home/home_page.dart';
 
 
@@ -72,51 +73,117 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             Text(
               'Mobile Number: ${widget.mobileNumber}',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 24),
             ),
             SizedBox(height: 20),
-            TextFormField(
-              controller: _firstNameController,
-              decoration: InputDecoration(labelText: 'First Name'),
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _firstNameController,
+                decoration: const InputDecoration(
+                  labelText: "First Name",
+                ),
+              ),
             ),
-            TextFormField(
-              controller: _lastNameController,
-              decoration: InputDecoration(labelText: 'Last Name'),
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(
+                  labelText: "Last Name",
+                ),
+              ),
             ),
-            TextFormField(
-              controller: _ageController,
-              decoration: InputDecoration(labelText: 'Age'),
-              keyboardType: TextInputType.number,
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _ageController,
+                decoration: const InputDecoration(
+                  labelText: "Age",
+                ),
+              ),
             ),
-            TextFormField(
-              controller: _locationController,
-              decoration: InputDecoration(labelText: 'Location'),
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: "Location",
+                ),
+              ),
             ),
-            TextFormField(
-              controller: _genderController,
-              decoration: InputDecoration(labelText: 'Gender'),
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _genderController,
+                decoration: const InputDecoration(
+                  labelText: "Gender",
+                ),
+              ),
             ),
-            TextFormField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: "Email",
+                ),
+              ),
             ),
-            TextFormField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _passwordController,
+                decoration: const InputDecoration(
+                  labelText: "Password",
+                ),
+                obscureText: true,
+              ),
             ),
-            TextFormField(
-              controller: _confirmPasswordController,
-              decoration: InputDecoration(labelText: 'Confirm Password'),
-              obscureText: true,
+            Container(
+              decoration: customBoxDecoration,
+              margin: const EdgeInsets.all(10),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+              child: TextField(
+                controller: _confirmPasswordController,
+                decoration: const InputDecoration(
+                  labelText: "Confirm Password",
+                ),
+                obscureText: true,
+              ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _registerUser,
-              child: Text('Register'),
+            const SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                autofocus: mounted,
+                onPressed: _registerUser,
+                child: Text('Register',style: TextStyle(color: Colors.white,fontSize: 32),),
+              ),
             ),
           ],
         ),

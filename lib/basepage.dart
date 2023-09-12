@@ -60,3 +60,11 @@ class MyApp extends StatelessWidget {
   }
 }
 
+final BoxDecoration customBoxDecoration = BoxDecoration(
+  border: Border.all(
+    color: Colors.black,
+  ),
+  borderRadius: BorderRadius.circular(10),
+  color: Colors.white,
+);
+

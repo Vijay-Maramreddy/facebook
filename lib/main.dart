@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'Authentication/password_reset.dart';
+import 'basepage.dart';
 
 Future main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,32 +105,19 @@ class _openScreenState extends State<openScreen> {
                     child: Column(
                       children: [
                         Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Colors.black
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            color: Colors.white,
-                          ),
+                          decoration: customBoxDecoration,
                           margin: const EdgeInsets.all(10),
                           alignment: Alignment.center,
-                          padding:const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                           child: TextField(
                             controller: _emailController,
-                            keyboardType: TextInputType.phone,
                             decoration: const InputDecoration(
                               labelText: "Email",
                             ),
                           ),
                         ),
                         Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Colors.black
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            color: Colors.white,
-                          ),
+                          decoration: customBoxDecoration,
                           margin: const EdgeInsets.all(10),
                           alignment: Alignment.center,
                           padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
@@ -244,8 +232,6 @@ class _openScreenState extends State<openScreen> {
         print('Error: $e');
       }
     }
-
-
 }
 
 
