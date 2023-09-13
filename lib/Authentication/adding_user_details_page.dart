@@ -49,13 +49,12 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         'mobileNumber': widget.mobileNumber,
         'email':_emailController.text,
         'password':_passwordController.text,
-
       });
 
       // Navigate to the home page or another screen
       // For example:
       Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (context) => HomeScreen(),
+        builder: (context) => const HomeScreen(),
       ));
     } catch (e) {
       print('Error: $e');
