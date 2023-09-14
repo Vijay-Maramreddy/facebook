@@ -136,17 +136,6 @@ class _PasswordResetState extends State<PasswordReset> {
                           child: const Text('Reset Password'),
                         ),
 
-                        // ElevatedButton(
-                        //   onPressed: () {
-                        //     passwordMatch(
-                        //       _passwordController.text,
-                        //       _confirmPasswordController.text,
-                        //       updatePasswordByMobileNumber(_mobileNumberController.text, _passwordController.text,) as Function?,
-                        //     );
-                        //   },
-                        //   child: const Text('Reset Password'),
-                        // ),
-
                       ],
                     ),
 

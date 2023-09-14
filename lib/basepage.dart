@@ -1,6 +1,8 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 class BasePage extends StatelessWidget {
   const BasePage({super.key});
 
@@ -67,4 +69,17 @@ final BoxDecoration customBoxDecoration = BoxDecoration(
   borderRadius: BorderRadius.circular(10),
   color: Colors.white,
 );
+
+
+
+pickImage(ImageSource source) async{
+  final ImagePicker _imagePicker =ImagePicker();
+  XFile? _file=await _imagePicker.pickImage(source: source);
+  if(_file !=null){
+    return await _file.readAsBytes();
+  }
+  else{
+    print("Image not found");
+  }
+}
 

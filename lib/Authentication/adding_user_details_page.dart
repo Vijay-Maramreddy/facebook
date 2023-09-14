@@ -54,7 +54,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
       // Navigate to the home page or another screen
       // For example:
       Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
+        builder: (context) => HomeScreen(email: _emailController.text,),
       ));
     } catch (e) {
       print('Error: $e');
