@@ -38,6 +38,8 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
       // Get the UID of the newly created user
       String uid = userCredential.user!.uid;
+      print(uid);
+
 
       // Store additional user details in Firestore
       await _firestore.collection('users').doc(uid).set({

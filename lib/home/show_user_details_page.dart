@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/home/home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 
 
 import '../basepage.dart';
@@ -99,6 +101,20 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
    });
   }
 
+  Future<void> loadImage(imageUrl) async {
+    final image = await http.get(Uri.parse(imageUrl));
+    if (image.statusCode == 200) {
+      setState(() {
+        print('loaded image. Status code');
+        _image = image.bodyBytes;
+      });
+    }
+    else
+    {
+      print('Failed to load image. Status code: ${image.statusCode}');
+    }
+  }
+
 
 
 
@@ -119,8 +135,9 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
             _locationController.text =userDocument['location'] ?? '';
             _ageController.text =userDocument['age'] ?? '';
             _genderController.text =userDocument['gender'] ?? '';
-            // _image=userDocument['profileImageUrl']??'' ;
-            // _image=Image.network(imageUrl) as Uint8List?;
+            String loadImageUrl=userDocument['profileImageUrl'];
+            loadImage(loadImageUrl);
+
           });
     }else{
       String message="user details not found";

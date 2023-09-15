@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'AppAtyle.dart';
+
 class BasePage extends StatelessWidget {
   const BasePage({super.key});
 
@@ -82,4 +84,32 @@ pickImage(ImageSource source) async{
     print("Image not found");
   }
 }
+
+Widget imagePicker(bool imageList, Function() onClick, String title1, String title2) {
+  return GestureDetector(
+      onTap: onClick,
+      child: Container(
+          height: imageList ? 50 : 100,
+          decoration: BoxDecoration(color: const Color.fromARGB(255, 203, 231, 221), borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.symmetric(vertical: AppStyles.appHorizontalPadding / 2),
+          padding: const EdgeInsets.all(AppStyles.appHorizontalPadding),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!imageList) ...[
+                Icon(
+                  Icons.camera_alt,
+                  size: imageList ? 4 : 12,
+                  color: Colors.orange,
+                )
+              ],
+              Text(
+                imageList ? title1 : title2,
+                style: const TextStyle(color: Colors.black38),
+              )
+            ],
+          )));
+}
+
 
