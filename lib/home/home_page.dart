@@ -1,20 +1,17 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/home/show_user_details_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../Posts/ImageCollectionWidget.dart';
 import '../basepage.dart';
-import 'dart:io';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
-
-
 
 class HomeScreen extends StatefulWidget {
-   // Pass the user's email as a parameter
   final String email;
 
   const HomeScreen({Key? key, required this.email}) : super(key: key);
@@ -26,6 +23,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late Uint8List _image;
   final FirebaseStorage _storage=FirebaseStorage.instance;
+  late String title;
+  late Uint8List imageFile;
+
+  @override
+  void initState() {
+    super.initState();
+    //
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,10 +40,9 @@ class _HomeScreenState extends State<HomeScreen> {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: Icon(Icons.person),
+            icon: const Icon(Icons.person),
             color: Colors.blue,
             onPressed: () {
-              print("hi");
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -50,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
         flexibleSpace: Row(
           children: [
             IconButton(
-              icon: Icon(Icons.facebook),
+              icon: const Icon(Icons.facebook),
               color: Colors.blue, // Customize the color as needed
               onPressed: () {
                 // Add your left-end icon onPressed functionality here.
@@ -58,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Expanded(
               child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   color: Colors.white, // Customize the background color as needed
@@ -96,34 +101,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     SizedBox(
                       width: 300,
-                      child:TextButton( onPressed: uploadImageAndSaveUrl,child:Text("upload post")) ,),
-                    SizedBox(width: 300,child: TextButton( onPressed: (){},child:Text("Text1")) ,),
-                    SizedBox(width: 300,child: TextButton( onPressed: (){},child:Text("Text1")) ,),
+                      child:Container(
+                        decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),color: Colors.blue),
+                          child: TextButton( onPressed: uploadImageAndSaveUrl,child:const Text("upload post",style: TextStyle(color: Colors.white,fontSize: 36),)))
+                      ,),
+                    const SizedBox(height: 20,),
+                    SizedBox(
+                      width: 300,
+                      child:Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),color: Colors.blue),
+                          child: TextButton( onPressed:() {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ShowUserDetailsPage(email: widget.email,),
+                              ),
+                            );
+                          }, child:const Text("User Profile",style: TextStyle(color: Colors.white,fontSize: 36),)))
+                      ,),
+                    const SizedBox(height: 20,),
+                    SizedBox(
+                      width: 300,
+                      child:Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),color: Colors.blue),
+                          child: TextButton( onPressed:(){},child:const Text("Log Out",style: TextStyle(color: Colors.white,fontSize: 36),)))
+                      ,),
+                    const SizedBox(height: 20,),
                   ],
                 ),
               ),
             ),
-             Center(
-                child: Container(
+            Center(
+               child:ImageCollectionWidget(),
 
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: 600,
-                        child: Text("picture 1"),
-                      ),
-                      SizedBox(
-                        width: 600,
-                        child: Text("picture 2"),
-                      ),
-                      SizedBox(
-                        width: 600,
-                        child: Text("picture 3"),
-                      )
-                    ],
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
       ),
@@ -136,29 +147,51 @@ class _HomeScreenState extends State<HomeScreen> {
       return _image;
   }
 
-  void addImageUrlToFirebase(String userId, String imageUrl) {
-    final databaseReference = FirebaseDatabase.instance.reference();
-    print("inside add image url to firebase");
+  Future<void> addImageUrlToFirebase(String userId,String imageUrl,String title) async {
+    final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
-    databaseReference
-        .child('users')
-        .child(userId)
-        .child('image_urls')
-        .push()
-        .set({'imageUrl': imageUrl});
+    // Add a new document to the 'images' collection
+    await imagesCollection.add({
+      'imageUrl': imageUrl,
+      'userId': userId,
+      'title':title,
+      // 'comments': comments,
+    });
+
+    // Insert the new image data at the beginning of the list
+    // imageDataList.insert(
+    //   0,
+    //   ImageData(
+    //     imageUrl: imageUrl,
+    //     likes: likes,
+    //     comments: comments,
+    //     isLiked: false,
+    //     isCommentVisible: false,
+    //   ),
+    // );
   }
+
+
   void uploadImageAndSaveUrl() async {
-    Uint8List imageFile = await pickImageFromGallery();
+    imageFile = await pickImageFromGallery();
 
     if (imageFile != null) {
+      String? title= await _showImagePickerDialog();
+      // String? title = await _showImagePickerDialog();
+      print("hi $title");
+
       String? imageUrl = await uploadImageToStorage('postImages',imageFile);
       if (imageUrl != null) {
         // Use the Firebase auth user's UID as the user ID
         User? user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          print(user);
-          addImageUrlToFirebase(user.uid, imageUrl);
+          print(user.uid);
+          print(title);
+          await addImageUrlToFirebase(user.uid, imageUrl, title!);
           print('Image uploaded. URL: $imageUrl');
+          setState(() {
+
+          });
         } else {
           print('Error: User is not authenticated.');
         }
@@ -178,4 +211,58 @@ class _HomeScreenState extends State<HomeScreen> {
     print("end of upload image to storage: downloadUrl is: $downloadUrl");
     return downloadUrl;
   }
+  Future<String?> _showImagePickerDialog() async {
+
+    if (imageFile != null) {
+
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          title = '';
+
+          return AlertDialog(
+            title: const Text('Assign a Title'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.memory(imageFile),
+                TextField(
+                  onChanged: (value) {
+                    title = value;
+                  },
+                  decoration: const InputDecoration(labelText: 'Title'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Do something with the picked image and title
+                  // For demonstration, we'll just print the title
+                  print('Title: $title');
+
+                  Navigator.pop(context, title);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+      return title;
+    }
+    else {
+      return '';
+    }
+  }
+
 }
+
+
+

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 
 
 import '../basepage.dart';
@@ -35,6 +36,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   Uint8List? _image;
   late String errorMessage;
   late String imageUrl;
+  late String loadImageUrl='';
 
    void savedata()async{
 
@@ -101,19 +103,19 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
    });
   }
 
-  Future<void> loadImage(imageUrl) async {
-    final image = await http.get(Uri.parse(imageUrl));
-    if (image.statusCode == 200) {
-      setState(() {
-        print('loaded image. Status code');
-        _image = image.bodyBytes;
-      });
-    }
-    else
-    {
-      print('Failed to load image. Status code: ${image.statusCode}');
-    }
-  }
+  // Future<void> loadImage(imageUrl) async {
+  //    print(imageUrl);
+  //   final image = Image.network(imageUrl);
+  //   if(image!=null){
+  //   setState(() {
+  //     _image=image as Uint8List?;
+  //   });
+  //   }
+  //   else
+  //   {
+  //     print('Failed to load image');
+  //   }
+  // }
 
 
 
@@ -135,8 +137,8 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
             _locationController.text =userDocument['location'] ?? '';
             _ageController.text =userDocument['age'] ?? '';
             _genderController.text =userDocument['gender'] ?? '';
-            String loadImageUrl=userDocument['profileImageUrl'];
-            loadImage(loadImageUrl);
+            loadImageUrl=userDocument['profileImageUrl'];
+            // loadImage(loadImageUrl);
 
           });
     }else{
@@ -156,191 +158,206 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       ),
       body: Container(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [Column(
+        child: SingleChildScrollView(
+          child: Column(
             children: [
-              Stack(
-                children: [
-                  _image !=null?
-                  CircleAvatar(
-                    radius: 65,
-                    backgroundImage: MemoryImage(_image!),
-                  )
-                      :const CircleAvatar(
-                    radius: 65,
-                    backgroundImage: NetworkImage("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9HDTr7uGXlc9XR0jywyFIPEL0jfSG3igeww&usqp=CAU"),
-                  ),
-                  Positioned(
-                    left: -10,
-                    bottom: 80,
-                    child: IconButton(
-                      onPressed: selectImage,
-                      icon: const Icon(Icons.add_a_photo,color: Colors.blue),
+              GestureDetector(
+                onTap: selectImage,
+                child: Container(
+                  width: 200, // Increased width
+                  height: 200, // Increased height
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.blue,
+                      width: 2.0,
                     ),
                   ),
-                ],
-              )
+                  child: _image!= null
+                      ? ClipOval(
+                    child: Image.memory(
+                      _image!,
+                      width: 200, // Increased width
+                      height: 200, // Increased height
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                      : loadImageUrl!.isNotEmpty
+                      ? ClipOval(
+                    child: Image.network(
+                      loadImageUrl!,
+                      width: 200,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
+                  ):
+                  Icon(
+                    Icons.camera_alt,
+                    size: 80, // Increased size
+                    color: Colors.blue,
+                  ),
+                ),
+              ),
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+
+                    TextFormField(
+                      cursorColor: Colors.purple,
+                      controller: _firstNameController,
+                      decoration: InputDecoration(
+                        labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
+                        labelText: 'First Name',
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        prefixIcon: const Icon(Icons.person, color: Colors.purple),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your first name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
+                    TextFormField(
+                      cursorColor: Colors.purple,
+                      controller: _lastNameController,
+                      decoration: InputDecoration(
+                        labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
+                        labelText: 'Last Name',
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        prefixIcon: const Icon(Icons.person, color: Colors.purple),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your last name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
+                    TextFormField(
+                      cursorColor: Colors.purple,
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
+                        labelText: 'Email',
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        prefixIcon: const Icon(Icons.email, color: Colors.purple),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
+                    TextFormField(
+                      cursorColor: Colors.purple,
+                      controller: _locationController,
+                      decoration: InputDecoration(
+                        labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
+                        labelText: 'Location',
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        prefixIcon: const Icon(Icons.location_on, color: Colors.purple),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your location';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
+                    TextFormField(
+                      cursorColor: Colors.purple,
+                      controller: _ageController,
+                      decoration: InputDecoration(
+                        labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
+                        labelText: 'Age',
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        prefixIcon: const Icon(Icons.location_on, color: Colors.purple),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your age';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
+                    TextFormField(
+                      cursorColor: Colors.purple,
+                      controller: _genderController,
+                      decoration: InputDecoration(
+                        labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
+                        labelText: 'Gender',
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        prefixIcon: const Icon(Icons.location_on, color: Colors.purple),
+                      ),
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Please enter your gender';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16.0),
+
+                    SizedBox(
+                      height: 40,
+                      width: 120,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.all(5),
+                          backgroundColor: Colors.yellow,
+                          foregroundColor: Colors.black,
+                        ),
+                        onPressed: savedata,
+                        child: const Padding(
+                          padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
+                          child: Text('Save'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-
-                  TextFormField(
-                    cursorColor: Colors.purple,
-                    controller: _firstNameController,
-                    decoration: InputDecoration(
-                      labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
-                      labelText: 'First Name',
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      prefixIcon: const Icon(Icons.person, color: Colors.purple),
-                    ),
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your first name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    cursorColor: Colors.purple,
-                    controller: _lastNameController,
-                    decoration: InputDecoration(
-                      labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
-                      labelText: 'Last Name',
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      prefixIcon: const Icon(Icons.person, color: Colors.purple),
-                    ),
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your last name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    cursorColor: Colors.purple,
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
-                      labelText: 'Email',
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      prefixIcon: const Icon(Icons.email, color: Colors.purple),
-                    ),
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    cursorColor: Colors.purple,
-                    controller: _locationController,
-                    decoration: InputDecoration(
-                      labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
-                      labelText: 'Location',
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      prefixIcon: const Icon(Icons.location_on, color: Colors.purple),
-                    ),
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your location';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    cursorColor: Colors.purple,
-                    controller: _ageController,
-                    decoration: InputDecoration(
-                      labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
-                      labelText: 'Age',
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      prefixIcon: const Icon(Icons.location_on, color: Colors.purple),
-                    ),
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your age';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    cursorColor: Colors.purple,
-                    controller: _genderController,
-                    decoration: InputDecoration(
-                      labelStyle: const TextStyle(color:Colors.black, fontSize: 12),
-                      labelText: 'Gender',
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      prefixIcon: const Icon(Icons.location_on, color: Colors.purple),
-                    ),
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Please enter your gender';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-
-                  SizedBox(
-                    height: 40,
-                    width: 120,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.all(5),
-                        backgroundColor: Colors.yellow,
-                        foregroundColor: Colors.black,
-                      ),
-                      onPressed: savedata,
-                      child: const Padding(
-                        padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
-                        child: Text('Save'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
