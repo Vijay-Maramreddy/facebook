@@ -9,7 +9,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../AppAtyle.dart';
+import '../AppStyle.dart';
 import '../Posts/ImageCollectionWidget.dart';
 import '../basepage.dart';
 
@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return _image;
   }
 
-  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, List<String> comments, List<String> likedBy) async {
+  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, List<String> comments, List<String> likedBy, String profileImageUrl, String firstName) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
@@ -194,6 +194,8 @@ class _HomeScreenState extends State<HomeScreen> {
       'likes': likes,
       'likedBy': likedBy,
       'comments': comments,
+      'profileImageUrl':profileImageUrl,
+      'firstName':firstName,
     });
 
     // Insert the new image data at the beginning of the list
@@ -217,6 +219,8 @@ class _HomeScreenState extends State<HomeScreen> {
       int likes = 0;
       List<String> comments = [];
       List<String> likedBy = [];
+      late String profileImageUrl;
+      late String firstName;
       // String? title = await _showImagePickerDialog();
       print("hi $title");
       String uuid = AppStyles.uuid();
@@ -224,11 +228,30 @@ class _HomeScreenState extends State<HomeScreen> {
       String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
       if (imageUrl != null) {
         // Use the Firebase auth user's UID as the user ID
+        CollectionReference usersCollection = await FirebaseFirestore.instance.collection('users');
+        // // Query the collection to find documents that match the provided mobile number
+        // DocumentSnapshot documentSnapshot = await usersCollection.doc(user.uid).get();
         User? user = FirebaseAuth.instance.currentUser;
         if (user != null) {
+          DocumentSnapshot documentSnapshot = await usersCollection.doc(user.uid).get();
+          if (documentSnapshot.exists) {
+            Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
+            if (data != null) {
+
+               profileImageUrl= data['profileImageUrl'] ;
+              firstName = data['firstName'];
+
+            } else {
+              print('Document data is null.');
+            }
+
+          }else{
+            String message="user details not found";
+            showAlert(context, message);
+          }
           print(user.uid);
           print(title);
-          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, comments, likedBy);
+          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, comments, likedBy,profileImageUrl,firstName);
           print('Image uploaded. URL: $imageUrl');
           setState(() {});
         } else {
@@ -300,3 +323,4 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 }
+

@@ -4,6 +4,8 @@ class ImageDocument {
   final String imageUrl;
   final String title;
   final String userId;
+  final String profileImageUrl;
+  final String firstName;
   final List<String> comments;
   final List<String> likedBy;
   int likes;
@@ -14,6 +16,8 @@ class ImageDocument {
     required this.imageUrl,
     required this.title,
     required this.userId,
+    required this.profileImageUrl,
+    required this.firstName,
     required this.comments,
     required this.likedBy,
     this.likes = 0,
@@ -31,6 +35,8 @@ class ImageDocument {
       likes: data['likes'] ?? 0,
       commentsCount: data['commentsCount'] ?? 0,
       sharesCount: data['sharesCount'] ?? 0,
+      profileImageUrl: data['profileImageUrl']??'',
+      firstName:data['firstName']?? '',
     );
   }
   // void incrementLikes() {

@@ -7,12 +7,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 
+import '../AppStyle.dart';
 import '../basepage.dart';
 
 
 class ShowUserDetailsPage extends StatefulWidget {
-  final String email;
-  const ShowUserDetailsPage({super.key, required this.email});
+  final String? email;
+
+  final String? userId;
+  const ShowUserDetailsPage({super.key, this.email,this.userId});
 
   @override
   _ShowUserDetailsPageState createState() => _ShowUserDetailsPageState();
@@ -32,10 +35,11 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   late String errorMessage;
   late String imageUrl;
   late String loadImageUrl='';
+  bool editable=false;
 
    void savedata()async{
-
-     imageUrl =await uploadImageToStorage('profileImage', _image!);
+     String uuid = AppStyles.uuid();
+     imageUrl =await uploadImageToStorage('profileImage/' + uuid, _image!);
      Map<String, dynamic> updatedData = {
        'firstName': _firstNameController.text,
        'lastName': _lastNameController.text,
@@ -54,7 +58,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
        if (querySnapshot.docs.isNotEmpty) {
          DocumentSnapshot userDocument = querySnapshot.docs.first;
-         await usersCollection.doc(userDocument.id).update(updatedData);
+         await usersCollection.doc(widget.userId).update(updatedData);
          Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(email: _emailController.text)));
        }else {
          String message = "User details not found";
@@ -102,13 +106,45 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
   void loadUserDetails() async {
     print("loading user detials");
-    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+
+
+    print(widget.userId);
     // Query the collection to find documents that match the provided mobile number
-    QuerySnapshot querySnapshot = await usersCollection.where('email', isEqualTo: widget.email).get();
-    if(querySnapshot.docs.isNotEmpty) {
+    if(widget.email!=null) {
+      editable=true;
+      CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+      QuerySnapshot querySnapshot = await usersCollection.where('email', isEqualTo: widget.email).get();
+      if(querySnapshot.docs.isNotEmpty) {
+        print("hi");
         DocumentSnapshot userDocument =querySnapshot.docs.first;
-          // Map<String, dynamic> data = querySnapshot.data() as Map<String, dynamic>;
-          // print(data);
+        // Map<String, dynamic> data = querySnapshot.data() as Map<String, dynamic>;
+        // print(data);
+
+          setState(() {
+          print("inside set state of loaduserdetails ");
+          _firstNameController.text = userDocument['firstName'] ?? '';
+          _lastNameController.text = userDocument['lastName'] ?? '';
+          _emailController.text = userDocument['email'] ?? '';
+          _locationController.text =userDocument['location'] ?? '';
+          _ageController.text =userDocument['age'] ?? '';
+          _genderController.text =userDocument['gender'] ?? '';
+          loadImageUrl=userDocument['profileImageUrl'];
+          // loadImage(loadImageUrl);
+
+        });
+      }
+      else{
+        String message="user details not found";
+        showAlert(context, message);
+      }
+    }
+    else
+      {
+        CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+        print(widget.userId);
+        // Query the collection to find the document with the provided UID
+        var userDocument = await usersCollection.doc(widget.userId).get();
+        if (userDocument.exists){
           setState(() {
             print("inside set state of loaduserdetails ");
             _firstNameController.text = userDocument['firstName'] ?? '';
@@ -121,14 +157,13 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
             // loadImage(loadImageUrl);
 
           });
-    }else{
-      String message="user details not found";
-      showAlert(context, message);
-    }
-
+        }
+        else{
+          String message="user details not found";
+          showAlert(context, message);
+        }
+      }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +219,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                   children: [
 
                     TextFormField(
+                      enabled: editable,
                       cursorColor: Colors.purple,
                       controller: _firstNameController,
                       decoration: InputDecoration(
@@ -206,6 +242,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                     ),
                     const SizedBox(height: 16.0),
                     TextFormField(
+                      enabled: editable,
                       cursorColor: Colors.purple,
                       controller: _lastNameController,
                       decoration: InputDecoration(
@@ -228,6 +265,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                     ),
                     const SizedBox(height: 16.0),
                     TextFormField(
+                      enabled: editable,
                       cursorColor: Colors.purple,
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -250,6 +288,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                     ),
                     const SizedBox(height: 16.0),
                     TextFormField(
+                      enabled: editable,
                       cursorColor: Colors.purple,
                       controller: _locationController,
                       decoration: InputDecoration(
@@ -272,6 +311,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                     ),
                     const SizedBox(height: 16.0),
                     TextFormField(
+                      enabled: editable,
                       cursorColor: Colors.purple,
                       controller: _ageController,
                       decoration: InputDecoration(
@@ -294,6 +334,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                     ),
                     const SizedBox(height: 16.0),
                     TextFormField(
+                      enabled: editable,
                       cursorColor: Colors.purple,
                       controller: _genderController,
                       decoration: InputDecoration(
@@ -316,20 +357,23 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                     ),
                     const SizedBox(height: 16.0),
 
-                    SizedBox(
-                      height: 40,
-                      width: 120,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.all(5),
-                          backgroundColor: Colors.yellow,
-                          foregroundColor: Colors.black,
-                        ),
-                        onPressed: savedata,
-                        child: const Padding(
-                          padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
-                          child: Text('Save'),
+                    Visibility(
+                      visible: editable,
+                      child: SizedBox(
+                        height: 40,
+                        width: 120,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.all(5),
+                            backgroundColor: Colors.yellow,
+                            foregroundColor: Colors.black,
+                          ),
+                          onPressed: savedata,
+                          child: const Padding(
+                            padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
+                            child: Text('Save'),
+                          ),
                         ),
                       ),
                     ),
