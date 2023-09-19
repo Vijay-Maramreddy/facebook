@@ -1,13 +1,15 @@
-import 'dart:convert';
+
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/home/show_user_details_page.dart';
+import 'package:facebook/main.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../AppAtyle.dart';
 import '../Posts/ImageCollectionWidget.dart';
 import '../basepage.dart';
 
@@ -22,9 +24,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Uint8List _image;
-  final FirebaseStorage _storage=FirebaseStorage.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   late String title;
   late Uint8List imageFile;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -35,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       appBar: AppBar(
         automaticallyImplyLeading: false,
         actions: [
@@ -43,12 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.person),
             color: Colors.blue,
             onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShowUserDetailsPage(email: widget.email,),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShowUserDetailsPage(
+                    email: widget.email,
                   ),
-                );
+                ),
+              );
             },
           ),
         ],
@@ -80,8 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body:
-           Center(
+      body: Center(
         child: Row(
           children: [
             Center(
@@ -90,50 +93,72 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.all(10),
                 alignment: Alignment.center,
                 padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-
                 child: Column(
                   children: [
-                     Container(
-
-                        child: Image.network(
-                          'https://w7.pngwing.com/pngs/788/714/png-transparent-logo-facebook-social-media-business-restaurant-menu-books-blue-text-trademark.png'
-                          ,width: 300,height: 200,),
+                    Container(
+                      child: Image.network(
+                        'https://w7.pngwing.com/pngs/788/714/png-transparent-logo-facebook-social-media-business-restaurant-menu-books-blue-text-trademark.png',
+                        width: 300,
+                        height: 200,
                       ),
+                    ),
                     SizedBox(
                       width: 300,
-                      child:Container(
-                        decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),color: Colors.blue),
-                          child: TextButton( onPressed: uploadImageAndSaveUrl,child:const Text("upload post",style: TextStyle(color: Colors.white,fontSize: 36),)))
-                      ,),
-                    const SizedBox(height: 20,),
+                      child: Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                          child: TextButton(
+                              onPressed: uploadImageAndSaveUrl,
+                              child: const Text(
+                                "upload post",
+                                style: TextStyle(color: Colors.white, fontSize: 36),
+                              ))),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
                     SizedBox(
                       width: 300,
-                      child:Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),color: Colors.blue),
-                          child: TextButton( onPressed:() {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ShowUserDetailsPage(email: widget.email,),
-                              ),
-                            );
-                          }, child:const Text("User Profile",style: TextStyle(color: Colors.white,fontSize: 36),)))
-                      ,),
-                    const SizedBox(height: 20,),
+                      child: Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                          child: TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ShowUserDetailsPage(
+                                      email: widget.email,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                "User Profile",
+                                style: TextStyle(color: Colors.white, fontSize: 36),
+                              ))),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
                     SizedBox(
                       width: 300,
-                      child:Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),color: Colors.blue),
-                          child: TextButton( onPressed:(){},child:const Text("Log Out",style: TextStyle(color: Colors.white,fontSize: 36),)))
-                      ,),
-                    const SizedBox(height: 20,),
+                      child: Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                          child: TextButton(
+                              onPressed: () => _signOut(context),
+                              child: const Text(
+                                "Log Out",
+                                style: TextStyle(color: Colors.white, fontSize: 36),
+                              ))),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
                   ],
                 ),
               ),
             ),
             Center(
-               child:ImageCollectionWidget(),
-
+              child: ImageCollectionWidget(),
             ),
           ],
         ),
@@ -141,21 +166,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<Uint8List> pickImageFromGallery() async {
-    Uint8List img=await pickImage(ImageSource.gallery);
-      _image=img;
-      return _image;
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await _auth.signOut();
+      // Navigate to the login or home page after sign out
+      // Replace with the appropriate route in your app
+      Navigator.push(context, MaterialPageRoute(builder: (context) => openScreen()));
+    } catch (e) {
+      print('Error during sign out: $e');
+    }
   }
 
-  Future<void> addImageUrlToFirebase(String userId,String imageUrl,String title) async {
+  Future<Uint8List> pickImageFromGallery() async {
+    Uint8List img = await pickImage(ImageSource.gallery);
+    _image = img;
+    return _image;
+  }
+
+  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, List<String> comments, List<String> likedBy) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
     await imagesCollection.add({
       'imageUrl': imageUrl,
       'userId': userId,
-      'title':title,
-      // 'comments': comments,
+      'title': title,
+      'likes': likes,
+      'likedBy': likedBy,
+      'comments': comments,
     });
 
     // Insert the new image data at the beginning of the list
@@ -171,27 +209,28 @@ class _HomeScreenState extends State<HomeScreen> {
     // );
   }
 
-
   void uploadImageAndSaveUrl() async {
     imageFile = await pickImageFromGallery();
 
     if (imageFile != null) {
-      String? title= await _showImagePickerDialog();
+      String? title = await _showImagePickerDialog();
+      int likes = 0;
+      List<String> comments = [];
+      List<String> likedBy = [];
       // String? title = await _showImagePickerDialog();
       print("hi $title");
+      String uuid = AppStyles.uuid();
 
-      String? imageUrl = await uploadImageToStorage('postImages',imageFile);
+      String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
       if (imageUrl != null) {
         // Use the Firebase auth user's UID as the user ID
         User? user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           print(user.uid);
           print(title);
-          await addImageUrlToFirebase(user.uid, imageUrl, title!);
+          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, comments, likedBy);
           print('Image uploaded. URL: $imageUrl');
-          setState(() {
-
-          });
+          setState(() {});
         } else {
           print('Error: User is not authenticated.');
         }
@@ -202,19 +241,19 @@ class _HomeScreenState extends State<HomeScreen> {
       print('No image picked.');
     }
   }
-  Future<String> uploadImageToStorage(String childName,Uint8List file) async{
+
+  Future<String> uploadImageToStorage(String childName, Uint8List file) async {
     print("inside upload image to storage");
-    Reference ref= _storage.ref().child(childName);
-    UploadTask uploadTask=ref.putData(file);
-    TaskSnapshot snapshot=await uploadTask;
-    String downloadUrl= await snapshot.ref.getDownloadURL();
+    Reference ref = _storage.ref().child(childName);
+    UploadTask uploadTask = ref.putData(file);
+    TaskSnapshot snapshot = await uploadTask;
+    String downloadUrl = await snapshot.ref.getDownloadURL();
     print("end of upload image to storage: downloadUrl is: $downloadUrl");
     return downloadUrl;
   }
+
   Future<String?> _showImagePickerDialog() async {
-
     if (imageFile != null) {
-
       await showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -256,13 +295,8 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       );
       return title;
-    }
-    else {
+    } else {
       return '';
     }
   }
-
 }
-
-
-

@@ -1,15 +1,10 @@
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/home/home_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:http/http.dart' as http;
-// import 'package:http/http.dart' as http;
 
 
 import '../basepage.dart';
@@ -102,21 +97,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
      _image=img;
    });
   }
-
-  // Future<void> loadImage(imageUrl) async {
-  //    print(imageUrl);
-  //   final image = Image.network(imageUrl);
-  //   if(image!=null){
-  //   setState(() {
-  //     _image=image as Uint8List?;
-  //   });
-  //   }
-  //   else
-  //   {
-  //     print('Failed to load image');
-  //   }
-  // }
-
 
 
 
