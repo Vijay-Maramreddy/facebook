@@ -7,8 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 
-import '../AppStyle.dart';
-import '../basepage.dart';
+import '../app_style.dart';
+import '../base_page.dart';
 
 
 class ShowUserDetailsPage extends StatefulWidget {

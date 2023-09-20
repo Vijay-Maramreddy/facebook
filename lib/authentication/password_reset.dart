@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../basepage.dart';
+import '../base_page.dart';
 import '../main.dart';
 import 'adding_user_details_page.dart';
 
