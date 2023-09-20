@@ -130,11 +130,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         document.firstName,
                         style: TextStyle(fontSize: 20),
                       ),
-                      SizedBox(width: 8.0),
-                      Text(
-                        document.dateTime,
-                        style: TextStyle(fontSize: 14.0),
-                      ),
                     ],
                   ),
                 ),
@@ -142,6 +137,11 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             ),
           ),
           Text('Title: ${document.title}'),
+          SizedBox(width: 8.0),
+          Text(
+            document.dateTime,
+            style: TextStyle(fontSize: 14.0),
+          ),
           CachedNetworkImage(
             imageUrl: document.imageUrl,
             width: 200,
@@ -149,66 +149,47 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             fit: BoxFit.cover,
           ),
           SizedBox(height: 10.0),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
-                    onPressed: () async {
-                      User? user = FirebaseAuth.instance.currentUser;
-                      String? userId = user?.uid;
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
+                        onPressed: () async {
+                          User? user = FirebaseAuth.instance.currentUser;
+                          String? userId = user?.uid;
 
-                      DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
+                          DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
 
-                      if (imageSnapshot.exists) {
-                        ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-                        String documentId = imageSnapshot.id;
-                        print(documentId);
+                          if (imageSnapshot.exists) {
+                            ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+                            String documentId = imageSnapshot.id;
+                            print(documentId);
 
-                        bool userLiked = retrievedDoc.likedBy.contains(userId);
-                        print(userLiked);
-                        if (userLiked) {
-                          decrementLike(retrievedDoc, userId, documentId);
-                        } else {
-                          incrementLike(retrievedDoc, userId, documentId);
-                        }
-                        setState(() {});
-                      }
-                    },
-                  ),
-                  Text('Likes: ${document.likes}'),
-                ],
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.comment),
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return CommentInputSheet(
-                            documentsId: documentsId,
-                          );
+                            bool userLiked = retrievedDoc.likedBy.contains(userId);
+                            print(userLiked);
+                            if (userLiked) {
+                              decrementLike(retrievedDoc, userId, documentId);
+                            } else {
+                              incrementLike(retrievedDoc, userId, documentId);
+                            }
+
+                            setState(() {
+                              alreadyLiked = !alreadyLiked;
+                            });
+                          }
                         },
-                      );
-                    },
+                      ),
+                      Text('Likes: ${document.likes}'),
+                    ],
                   ),
-                  Text('Comments: ${document.commentsCount}'),
+                  // ... Existing code ...
                 ],
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.share),
-                    onPressed: () {},
-                  ),
-                  Text('Shares: ${document.sharesCount}'),
-                ],
-              ),
-            ],
+              );
+            },
           ),
         ],
       ),
@@ -270,3 +251,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     }
   }
 }
+
+
+
+
