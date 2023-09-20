@@ -130,6 +130,11 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         document.firstName,
                         style: TextStyle(fontSize: 20),
                       ),
+                      SizedBox(width: 8.0),
+                      Text(
+                        document.dateTime,
+                        style: TextStyle(fontSize: 14.0),
+                      ),
                     ],
                   ),
                 ),
@@ -137,11 +142,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             ),
           ),
           Text('Title: ${document.title}'),
-          SizedBox(width: 8.0),
-          Text(
-            document.dateTime,
-            style: TextStyle(fontSize: 14.0),
-          ),
           CachedNetworkImage(
             imageUrl: document.imageUrl,
             width: 200,
@@ -184,6 +184,33 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         },
                       ),
                       Text('Likes: ${document.likes}'),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.comment),
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return CommentInputSheet(
+                                documentsId: documentsId,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      Text('Comments: ${document.commentsCount}'),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.share),
+                        onPressed: () {},
+                      ),
+                      Text('Shares: ${document.sharesCount}'),
                     ],
                   ),
                   // ... Existing code ...
