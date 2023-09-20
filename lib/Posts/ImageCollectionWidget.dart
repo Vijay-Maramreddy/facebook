@@ -22,7 +22,10 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('images').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('images')
+            .orderBy('dateTime', descending: true)  // Order by dateTime in descending order
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return CircularProgressIndicator();
@@ -42,7 +45,12 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                 final document = snapshot.data!.docs[index];
                 String documentId = snapshot.data!.docs[index].id;
                 print(documentId);
-                List<dynamic> commentsData = document['comments'];
+                // List<dynamic> commentsData = document['comments'];
+                DateTime now = DateTime.now();
+                var commentDateTime = DateTime.parse(document['dateTime'] as String);
+                var difference = now.difference(commentDateTime);
+                String formattedTime = _formatTimeDifference(difference);
+
                 return buildImageCard(
                   ImageDocument(
                     imageUrl: document['imageUrl'],
@@ -52,10 +60,11 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                     likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
                     // comments: (document['comments'] as List<dynamic>).map((comment) => comment.toString()).toList(),
 
-                    comments: commentsData.map<List<String>>((comment) => List<String>.from(comment)).toList(),
+
                     // comments : commentsData.map((comment) => [comment]).toList();
                     firstName: document['firstName'],
                     profileImageUrl: document['profileImageUrl'],
+                    dateTime: formattedTime,
                   ),
                   documentsId: documentId,
                 );
@@ -63,6 +72,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             ),
           );
         },
+
       ),
     );
   }
@@ -119,6 +129,11 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                       Text(
                         document.firstName,
                         style: TextStyle(fontSize: 20),
+                      ),
+                      SizedBox(width: 8.0),
+                      Text(
+                        document.dateTime,
+                        style: TextStyle(fontSize: 14.0),
                       ),
                     ],
                   ),
@@ -243,6 +258,15 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     } else {
       String message = "user details not found";
       showAlert(context, message);
+    }
+  }
+  String _formatTimeDifference(Duration difference) {
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else {
+      return '${difference.inDays} days ago';
     }
   }
 }

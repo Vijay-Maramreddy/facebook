@@ -8,9 +8,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../app_style.dart';
-import '../Posts/image_collection_widget.dart';
+import '../Posts/ImageCollectionWidget.dart';
 import '../base_page.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -183,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return _image;
   }
 
-  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, List<String> comments, List<String> likedBy, String profileImageUrl, String firstName) async {
+  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, String dateTime, List<String> likedBy, String profileImageUrl, String firstName) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
@@ -193,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'title': title,
       'likes': likes,
       'likedBy': likedBy,
-      'comments': comments,
+      'dateTime': dateTime,
       'profileImageUrl':profileImageUrl,
       'firstName':firstName,
     });
@@ -217,14 +218,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (imageFile != null) {
       String? title = await _showImagePickerDialog();
       int likes = 0;
-      List<String> comments = [];
+
       List<String> likedBy = [];
       late String profileImageUrl;
       late String firstName;
       // String? title = await _showImagePickerDialog();
       print("hi $title");
       String uuid = AppStyles.uuid();
-
+      DateTime now = DateTime.now();
+      // DateTime now = DateTime.now();
+      String dateTime= DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
       if (imageUrl != null) {
         // Use the Firebase auth user's UID as the user ID
@@ -251,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           print(user.uid);
           print(title);
-          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, comments, likedBy,profileImageUrl,firstName);
+          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, dateTime, likedBy,profileImageUrl,firstName);
           print('Image uploaded. URL: $imageUrl');
           setState(() {});
         } else {

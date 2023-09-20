@@ -6,7 +6,7 @@ class ImageDocument {
   final String userId;
   final String profileImageUrl;
   final String firstName;
-  final List<List<String>> comments;
+  final String dateTime;
   final List<String> likedBy;
   int likes;
   int commentsCount;
@@ -18,25 +18,25 @@ class ImageDocument {
     required this.userId,
     required this.profileImageUrl,
     required this.firstName,
-    required this.comments,
+    required this.dateTime,
     required this.likedBy,
     this.likes = 0,
     this.commentsCount = 0,
-    this.sharesCount=0,
+    this.sharesCount = 0,
   });
   factory ImageDocument.fromSnapshot(DocumentSnapshot snapshot) {
     Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
     return ImageDocument(
-      imageUrl: data['imageUrl']?? '',
+      imageUrl: data['imageUrl'] ?? '',
       title: data['title'] ?? '',
       userId: data['userId'] ?? '',
-      comments: List<List<String>>.from(data['comments'] ?? []),
+      dateTime: data['dateTime']??'',
       likedBy: List<String>.from(data['likedBy'] ?? []),
       likes: data['likes'] ?? 0,
       commentsCount: data['commentsCount'] ?? 0,
       sharesCount: data['sharesCount'] ?? 0,
-      profileImageUrl: data['profileImageUrl']??'',
-      firstName:data['firstName']?? '',
+      profileImageUrl: data['profileImageUrl'] ?? '',
+      firstName: data['firstName'] ?? '',
     );
   }
   // void incrementLikes() {
