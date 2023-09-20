@@ -4,9 +4,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'comment_model.dart';
+
 class CommentInputSheet extends StatefulWidget {
   final String? documentsId;
-  CommentInputSheet({super.key, required this.documentsId});
+
+  CommentInputSheet({Key? key, required this.documentsId}) : super(key: key);
 
   @override
   _CommentInputSheetState createState() => _CommentInputSheetState();
@@ -14,14 +17,39 @@ class CommentInputSheet extends StatefulWidget {
 
 class _CommentInputSheetState extends State<CommentInputSheet> {
   TextEditingController _commentController = TextEditingController();
-  List<String> _comments = [];
-  String? profileImageUrl;
-  String? firstName;
+  List<Comment> _comments = [];
+  late String profileImageUrl;
+  late String firstName;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchComments(); // Fetch comments when the widget is initialized
+  Future<void> _fetchComments() async {
+    QuerySnapshot<Map<String, dynamic>> commentSnapshot =
+        await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).collection('comments').get();
+    DateTime now = DateTime.now();
+
+    setState(() {
+      _comments = commentSnapshot.docs.map((doc) {
+        var commentDateTime = DateTime.parse(doc['dateTime'] as String);
+        var difference = now.difference(commentDateTime);
+        String formattedTime = _formatTimeDifference(difference);
+        return Comment(
+          comment: doc['comment'] as String,
+          userId: doc['userId'] as String,
+          profileImageUrl: doc['profileImageUrl'] as String,
+          firstName: doc['firstName'] as String,
+          dateTime: formattedTime,
+        );
+      }).toList();
+      _comments = _comments.reversed.toList();
+    });
+  }
+  String _formatTimeDifference(Duration difference) {
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
   }
 
   void _saveComment() async {
@@ -66,10 +94,22 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
 
     // Clear the comment input field and close the bottom sheet
     setState(() {
-      _comments.add(comment);
+      _comments.add(Comment(
+        comment: comment,
+        userId: userId!,
+        profileImageUrl: profileImageUrl,
+        firstName: firstName,
+        dateTime: formattedDateTime,
+      ));
       _commentController.clear();
     });
     Navigator.pop(context); // Close the bottom sheet after saving
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchComments(); // Fetch comments when the widget is initialized
   }
 
   @override
@@ -79,14 +119,11 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListView.builder(
-            shrinkWrap: true,
-            itemCount: _comments.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(_comments[index]),
-              );
-            },
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _comments.map((comment) {
+              return CommentWidget(comment);
+            }).toList(),
           ),
 
           // Text input field for adding a new comment
@@ -102,14 +139,5 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
         ],
       ),
     );
-  }
-
-  Future<void> fetchComments() async {
-    QuerySnapshot<Map<String, dynamic>> commentSnapshot =
-        await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).collection('comments').get();
-
-    setState(() {
-      _comments = commentSnapshot.docs.map((doc) => doc['comment'] as String).toList();
-    });
   }
 }

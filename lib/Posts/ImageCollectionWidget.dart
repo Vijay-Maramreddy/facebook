@@ -7,7 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
-import 'image_document_model.dart';
+import 'ImageDocumentModel.dart';
 
 class ImageCollectionWidget extends StatefulWidget {
   @override
@@ -52,9 +52,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                     likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
                     // comments: (document['comments'] as List<dynamic>).map((comment) => comment.toString()).toList(),
 
-                  comments : commentsData
-                      .map<List<String>>((comment) => List<String>.from(comment))
-                    .toList(),
+                    comments: commentsData.map<List<String>>((comment) => List<String>.from(comment)).toList(),
                     // comments : commentsData.map((comment) => [comment]).toList();
                     firstName: document['firstName'],
                     profileImageUrl: document['profileImageUrl'],
@@ -95,29 +93,33 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                       ),
                     );
                   },
-                  child: Container(
-                    width: 30, // Increased width
-                    height: 30, // Increased height
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.blue,
-                        width: 0.1,
-                      ),
-                    ),
-                    child: ClipOval(
-                      child: Image.network(
-                        document.profileImageUrl,
+                  child: Row(
+                    children: [
+                      Container(
                         width: 30, // Increased width
                         height: 30, // Increased height
-                        fit: BoxFit.cover,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.blue,
+                            width: 0.1,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            document.profileImageUrl,
+                            width: 30, // Increased width
+                            height: 30, // Increased height
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                    ),
+                      Text(
+                        document.firstName,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  document.firstName,
-                  style: TextStyle(fontSize: 20),
                 ),
               ],
             ),
@@ -167,9 +169,13 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                   IconButton(
                     icon: Icon(Icons.comment),
                     onPressed: () {
-                      showModalBottomSheet(context: context, builder: (BuildContext context){
-                        return CommentInputSheet( documentsId:documentsId,);
-                      },
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return CommentInputSheet(
+                            documentsId: documentsId,
+                          );
+                        },
                       );
                     },
                   ),
@@ -180,8 +186,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.share),
-                    onPressed: () {
-                    },
+                    onPressed: () {},
                   ),
                   Text('Shares: ${document.sharesCount}'),
                 ],
