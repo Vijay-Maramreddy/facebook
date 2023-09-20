@@ -23,7 +23,12 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
 
   Future<void> _fetchComments() async {
     QuerySnapshot<Map<String, dynamic>> commentSnapshot =
-        await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).collection('comments').get();
+    await FirebaseFirestore.instance
+        .collection('images')
+        .doc(widget.documentsId)
+        .collection('comments')
+        .orderBy('dateTime', descending: true) // Order by timestamp in descending order
+        .get();
     DateTime now = DateTime.now();
 
     setState(() {
@@ -39,7 +44,6 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
           dateTime: formattedTime,
         );
       }).toList();
-      _comments = _comments.reversed.toList();
     });
   }
   String _formatTimeDifference(Duration difference) {
@@ -114,29 +118,31 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: _comments.map((comment) {
-              return CommentWidget(comment);
-            }).toList(),
-          ),
-
-          // Text input field for adding a new comment
-          TextField(
-            controller: _commentController,
-            decoration: InputDecoration(labelText: 'Enter your comment'),
-          ),
-          SizedBox(height: 16.0),
-          ElevatedButton(
-            onPressed: _saveComment,
-            child: Text('Save Comment'),
-          ),
-        ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: Container(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _commentController,
+              decoration: InputDecoration(labelText: 'Enter your comment'),
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: _saveComment,
+              child: Text('Save Comment'),
+            ),
+            SizedBox(height: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _comments.map((comment) {
+                return CommentWidget(comment);
+              }).toList(),
+            ), // Text input field for adding a new comment
+          ],
+        ),
       ),
     );
   }

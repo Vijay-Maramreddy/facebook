@@ -68,7 +68,9 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   }
 
   Widget buildImageCard(ImageDocument document, {required String documentsId}) {
-    late bool alreadyLiked = (document.likedBy.contains(document.userId));
+    User? user = FirebaseAuth.instance.currentUser;
+    String? CurrentuserId = user?.uid;
+    late bool alreadyLiked = (document.likedBy.contains(CurrentuserId));
 
     return Container(
       margin: EdgeInsets.all(10.0),
