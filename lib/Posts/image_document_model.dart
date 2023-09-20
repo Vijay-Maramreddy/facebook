@@ -6,7 +6,7 @@ class ImageDocument {
   final String userId;
   final String profileImageUrl;
   final String firstName;
-  final List<String> comments;
+  final List<List<String>> comments;
   final List<String> likedBy;
   int likes;
   int commentsCount;
@@ -30,7 +30,7 @@ class ImageDocument {
       imageUrl: data['imageUrl']?? '',
       title: data['title'] ?? '',
       userId: data['userId'] ?? '',
-      comments: List<String>.from(data['comments'] ?? []),
+      comments: List<List<String>>.from(data['comments'] ?? []),
       likedBy: List<String>.from(data['likedBy'] ?? []),
       likes: data['likes'] ?? 0,
       commentsCount: data['commentsCount'] ?? 0,

@@ -9,9 +9,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../AppStyle.dart';
-import '../Posts/ImageCollectionWidget.dart';
-import '../basepage.dart';
+import '../app_style.dart';
+import '../Posts/image_collection_widget.dart';
+import '../base_page.dart';
 
 class HomeScreen extends StatefulWidget {
   final String email;

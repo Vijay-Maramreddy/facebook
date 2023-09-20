@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'AppAtyle.dart';
+import 'app_style.dart';
 
 class BasePage extends StatelessWidget {
   const BasePage({super.key});
