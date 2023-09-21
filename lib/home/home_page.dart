@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late String title;
   late Uint8List imageFile;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  late bool showOnlyCurrentUserPosts=false;
 
   @override
   void initState() {
@@ -145,6 +146,38 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                           decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
                           child: TextButton(
+                              onPressed:(){setState(() {
+                                showOnlyCurrentUserPosts=true;
+                              });} ,
+                              child: const Text(
+                                "Your Posts",
+                                style: TextStyle(color: Colors.white, fontSize: 36),
+                              ))),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    SizedBox(
+                      width: 300,
+                      child: Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                          child: TextButton(
+                              onPressed:(){setState(() {
+                                showOnlyCurrentUserPosts=false;
+                              });} ,
+                              child: const Text(
+                                "All Posts",
+                                style: TextStyle(color: Colors.white, fontSize: 36),
+                              ))),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    SizedBox(
+                      width: 300,
+                      child: Container(
+                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                          child: TextButton(
                               onPressed: () => _signOut(context),
                               child: const Text(
                                 "Log Out",
@@ -159,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Center(
-              child: ImageCollectionWidget(),
+              child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts),
             ),
           ],
         ),

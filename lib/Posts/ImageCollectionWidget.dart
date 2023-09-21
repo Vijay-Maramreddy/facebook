@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:html';
 import 'dart:typed_data';
 
 import 'package:facebook/Posts/comment_input_screen.dart';
@@ -10,6 +12,9 @@ import '../home/show_user_details_page.dart';
 import 'ImageDocumentModel.dart';
 
 class ImageCollectionWidget extends StatefulWidget {
+  late bool? showOnlyCurrentUserPosts;
+  ImageCollectionWidget({required this.showOnlyCurrentUserPosts});
+
   @override
   _ImageCollectionWidgetState createState() => _ImageCollectionWidgetState();
 }
@@ -19,8 +24,10 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   late String profileImageUrl = '';
   late String firstName = '';
 
+
   @override
   Widget build(BuildContext context) {
+    print(widget.showOnlyCurrentUserPosts);
     Stream streams=FirebaseFirestore.instance
         .collection('images')
         .orderBy('dateTime', descending: true)  // Order by dateTime in descending order
@@ -87,155 +94,170 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
       {
         currentUserIsViewingUser=true;
       }
-    return Container(
-      margin: EdgeInsets.all(10.0),
-      padding: EdgeInsets.all(10.0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black),
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      child: Column(
-        children: [
-          Container(
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ShowUserDetailsPage(
-                          userId: document.userId,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 30, // Increased width
-                        height: 30, // Increased height
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 0.1,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: Image.network(
-                            document.profileImageUrl,
-                            width: 30, // Increased width
-                            height: 30, // Increased height
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        document.firstName,
-                        style: TextStyle(fontSize: 20),
-                      ),
-                      SizedBox(width: 8.0),
-                      Text(
-                        document.dateTime,
-                        style: TextStyle(fontSize: 14.0),
-                      ),
-                      Visibility(
-                        visible: currentUserIsViewingUser ,
-                        child: IconButton(
-                              onPressed: (){
-                                deletePost(documentsId);
-                                },
-                              icon: Icon(Icons.delete)
-                          ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text('Title: ${document.title}'),
-          CachedNetworkImage(
-            imageUrl: document.imageUrl,
-            width: 200,
-            height: 200,
-            fit: BoxFit.cover,
-          ),
-          SizedBox(height: 10.0),
-          StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Visibility(
+      visible:isVisible(document.userId),
+      child: Container(
+        margin: EdgeInsets.all(10.0),
+        padding: EdgeInsets.all(10.0),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black),
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Column(
+          children: [
+            Container(
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
-                        onPressed: () async {
-                          User? user = FirebaseAuth.instance.currentUser;
-                          String? userId = user?.uid;
-
-                          DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
-
-                          if (imageSnapshot.exists) {
-                            ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-                            String documentId = imageSnapshot.id;
-                            print(documentId);
-
-                            bool userLiked = retrievedDoc.likedBy.contains(userId);
-                            print(userLiked);
-                            if (userLiked) {
-                              decrementLike(retrievedDoc, userId, documentId);
-                            } else {
-                              incrementLike(retrievedDoc, userId, documentId);
-                            }
-
-                            setState(() {
-                              alreadyLiked = !alreadyLiked;
-                            });
-                          }
-                        },
-                      ),
-                      Text('Likes: ${document.likes}'),
-                    ],
-                  ),
-
-                  // ... Existing code ...
-                ],
-              );
-            },
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.comment),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return CommentInputSheet(
-                        documentsId: documentsId,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ShowUserDetailsPage(
+                            userId: document.userId,
+                          ),
+                        ),
                       );
                     },
-                  );
-                },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 30, // Increased width
+                          height: 30, // Increased height
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.blue,
+                              width: 0.1,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: Image.network(
+                              document.profileImageUrl,
+                              width: 30, // Increased width
+                              height: 30, // Increased height
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          document.firstName,
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        SizedBox(width: 8.0),
+                        Text(
+                          document.dateTime,
+                          style: TextStyle(fontSize: 14.0),
+                        ),
+                        Visibility(
+                          visible: currentUserIsViewingUser ,
+                          child: IconButton(
+                                onPressed: (){
+                                  deletePost(documentsId);
+                                  },
+                                icon: Icon(Icons.delete)
+                            ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Text('Comments: ${document.commentsCount}'),
-            ],
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.share),
-                onPressed: () {},
-              ),
-              Text('Shares: ${document.sharesCount}'),
-            ],
-          ),
-        ],
+            ),
+            Text('Title: ${document.title}'),
+            CachedNetworkImage(
+              imageUrl: document.imageUrl,
+              width: 200,
+              height: 200,
+              fit: BoxFit.cover,
+            ),
+            SizedBox(height: 10.0),
+            StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
+                          onPressed: () async {
+                            User? user = FirebaseAuth.instance.currentUser;
+                            String? userId = user?.uid;
+
+                            DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
+
+                            if (imageSnapshot.exists) {
+                              ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+                              String documentId = imageSnapshot.id;
+                              print(documentId);
+
+                              bool userLiked = retrievedDoc.likedBy.contains(userId);
+                              print(userLiked);
+                              if (userLiked) {
+                                decrementLike(retrievedDoc, userId, documentId);
+                              } else {
+                                incrementLike(retrievedDoc, userId, documentId);
+                              }
+
+                              setState(() {
+                                alreadyLiked = !alreadyLiked;
+                              });
+                            }
+                          },
+                        ),
+                        Text('Likes: ${document.likes}'),
+                      ],
+                    ),
+
+                    // ... Existing code ...
+                  ],
+                );
+              },
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.comment),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return CommentInputSheet(
+                          documentsId: documentsId,
+                        );
+                      },
+                    );
+                  },
+                ),
+                Text('Comments: ${document.commentsCount}'),
+              ],
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.share),
+                  onPressed: () {},
+                ),
+                Text('Shares: ${document.sharesCount}'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+  bool isVisible(String userId){
+    if(widget.showOnlyCurrentUserPosts==true)
+      {
+        User? user = FirebaseAuth.instance.currentUser;
+        String? CurrentuserId = user?.uid;
+        if(CurrentuserId!=userId)
+          {
+            return false;
+          }
+      }
+    return true;
   }
 
   Future<void> deletePost(String documentId) async {
