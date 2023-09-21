@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return _image;
   }
 
-  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, String dateTime, List<String> likedBy, String profileImageUrl, String firstName) async {
+  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes,int commentsCount, String dateTime, List<String> likedBy, String profileImageUrl, String firstName) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
@@ -193,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'userId': userId,
       'title': title,
       'likes': likes,
+      'commentsCount':commentsCount,
       'likedBy': likedBy,
       'dateTime': dateTime,
       'profileImageUrl':profileImageUrl,
@@ -222,11 +223,11 @@ class _HomeScreenState extends State<HomeScreen> {
       List<String> likedBy = [];
       late String profileImageUrl;
       late String firstName;
+      int commentsCount=0;
       // String? title = await _showImagePickerDialog();
       print("hi $title");
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
-      // DateTime now = DateTime.now();
       String dateTime= DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
       if (imageUrl != null) {
@@ -254,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           print(user.uid);
           print(title);
-          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, dateTime, likedBy,profileImageUrl,firstName);
+          await addImageUrlToFirebase(user.uid,imageUrl, title!,likes,commentsCount,dateTime,likedBy,profileImageUrl,firstName);
           print('Image uploaded. URL: $imageUrl');
           setState(() {});
         } else {

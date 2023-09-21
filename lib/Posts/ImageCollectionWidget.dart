@@ -15,11 +15,16 @@ class ImageCollectionWidget extends StatefulWidget {
 }
 
 class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
+
   late String profileImageUrl = '';
   late String firstName = '';
 
   @override
   Widget build(BuildContext context) {
+    Stream streams=FirebaseFirestore.instance
+        .collection('images')
+        .orderBy('dateTime', descending: true)  // Order by dateTime in descending order
+        .snapshots();
     return SingleChildScrollView(
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -45,7 +50,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                 final document = snapshot.data!.docs[index];
                 String documentId = snapshot.data!.docs[index].id;
                 print(documentId);
-                // List<dynamic> commentsData = document['comments'];
                 DateTime now = DateTime.now();
                 var commentDateTime = DateTime.parse(document['dateTime'] as String);
                 var difference = now.difference(commentDateTime);
@@ -58,12 +62,9 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                     userId: document['userId'],
                     likes: document['likes'],
                     likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
-                    // comments: (document['comments'] as List<dynamic>).map((comment) => comment.toString()).toList(),
-
-
-                    // comments : commentsData.map((comment) => [comment]).toList();
                     firstName: document['firstName'],
                     profileImageUrl: document['profileImageUrl'],
+                    commentsCount: document['commentsCount'],
                     dateTime: formattedTime,
                   ),
                   documentsId: documentId,
@@ -81,7 +82,11 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     User? user = FirebaseAuth.instance.currentUser;
     String? CurrentuserId = user?.uid;
     late bool alreadyLiked = (document.likedBy.contains(CurrentuserId));
-
+    bool currentUserIsViewingUser=false;
+    if(document.userId==CurrentuserId)
+      {
+        currentUserIsViewingUser=true;
+      }
     return Container(
       margin: EdgeInsets.all(10.0),
       padding: EdgeInsets.all(10.0),
@@ -135,6 +140,15 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         document.dateTime,
                         style: TextStyle(fontSize: 14.0),
                       ),
+                      Visibility(
+                        visible: currentUserIsViewingUser ,
+                        child: IconButton(
+                              onPressed: (){
+                                deletePost(documentsId);
+                                },
+                              icon: Icon(Icons.delete)
+                          ),
+                      ),
                     ],
                   ),
                 ),
@@ -186,41 +200,59 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                       Text('Likes: ${document.likes}'),
                     ],
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.comment),
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return CommentInputSheet(
-                                documentsId: documentsId,
-                              );
-                            },
-                          );
-                        },
-                      ),
-                      Text('Comments: ${document.commentsCount}'),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.share),
-                        onPressed: () {},
-                      ),
-                      Text('Shares: ${document.sharesCount}'),
-                    ],
-                  ),
+
                   // ... Existing code ...
                 ],
               );
             },
           ),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.comment),
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return CommentInputSheet(
+                        documentsId: documentsId,
+                      );
+                    },
+                  );
+                },
+              ),
+              Text('Comments: ${document.commentsCount}'),
+            ],
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.share),
+                onPressed: () {},
+              ),
+              Text('Shares: ${document.sharesCount}'),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> deletePost(String documentId) async {
+    try {
+      // Access the collection and delete the document with the given ID
+      await FirebaseFirestore.instance
+          .collection('images')
+          .doc(documentId)
+          .delete();
+      setState(() {
+
+      });
+
+      print('Document with ID $documentId deleted successfully.');
+    } catch (e) {
+      print('Error deleting document: $e');
+    }
   }
 
   void incrementLike(ImageDocument document, String? userId, documentId) {
