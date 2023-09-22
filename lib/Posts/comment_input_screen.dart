@@ -21,6 +21,8 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
   List<Comment> _comments = [];
   late String profileImageUrl;
   late String firstName;
+  late bool commentsVisible=true;
+
 
   Future<void> _fetchComments() async {
     QuerySnapshot<Map<String, dynamic>> commentSnapshot =
@@ -31,8 +33,11 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
         .orderBy('dateTime', descending: true) // Order by timestamp in descending order
         .get();
     DateTime now = DateTime.now();
+    commentsVisible = await isCommentsVisible(widget.documentsId);
 
     setState(() {
+
+
       _comments = commentSnapshot.docs.map((doc) {
         var commentDateTime = DateTime.parse(doc['dateTime'] as String);
         var difference = now.difference(commentDateTime);
@@ -132,6 +137,7 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: Container(
@@ -149,16 +155,37 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
               child: Text('Save Comment'),
             ),
             SizedBox(height: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _comments.map((comment) {
-                return CommentWidget(comment);
-              }).toList(),
+            Visibility(
+              visible: commentsVisible,
+          // isCommentsVisible(widget.documentsId),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _comments.map((comment) {
+                  return CommentWidget(comment);
+                }).toList(),
+              ),
             ), // Text input field for adding a new comment
           ],
         ),
       ),
     );
+  }
+  isCommentsVisible(String? documentsId) async {
+    DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).get();
+    ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+    bool status=retrievedDoc.status;
+    User? user = FirebaseAuth.instance.currentUser;
+    String? CurrentuserId = user?.uid;
+    if(status==true && retrievedDoc.userId!=CurrentuserId){
+      print("This is the Status :$status");
+      String retrieved_doc_user=retrievedDoc.userId;
+      print("this is retrieved doc userId :$retrieved_doc_user and currentuser is $CurrentuserId");
+      return false;
+    }
+    else {
+      return true;
+    }
+    // retrievedDoc.commentsCount++;
   }
 }
 
