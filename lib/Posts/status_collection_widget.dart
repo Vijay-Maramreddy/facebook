@@ -183,8 +183,11 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                     return Dialog(
                       child: Column(
                         children:[
-                          Text('Title: ${document.title}'),
+
                           IconButton(onPressed: (){ Navigator.pop(context);}, icon: Icon(Icons.close)),
+                          SizedBox(height: 50,),
+                          Text('Title: ${document.title}',style: TextStyle(fontSize: 40,color: Colors.blue),),
+                          SizedBox(height: 20,),
                           Container(
                           padding: EdgeInsets.all(16.0),
                           width: dialogWidth,
@@ -231,42 +234,43 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                                       ),
                                     ],
                                   ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.comment),
+                                        onPressed: () {
+                                          showModalBottomSheet(
+                                            context: context,
+                                            builder: (BuildContext context) {
+                                              return CommentInputSheet(
+                                                documentsId: documentsId,
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                      Visibility(
+                                        visible: isCountVisible(document.userId),
+                                        child: Text('Comments: ${document.commentsCount}'),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.share),
+                                        onPressed: () {},
+                                      ),
+                                      Text('Shares: ${document.sharesCount}'),
+                                    ],
+                                  ),
 
                                   // ... Existing code ...
                                 ],
                               );
                             },
                           ),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.comment),
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return CommentInputSheet(
-                                        documentsId: documentsId,
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                              Visibility(
-                                visible: isCountVisible(document.userId),
-                                  child: Text('Comments: ${document.commentsCount}'),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.share),
-                                onPressed: () {},
-                              ),
-                              Text('Shares: ${document.sharesCount}'),
-                            ],
-                          ),
+
                     ]
                       ),
                     );
