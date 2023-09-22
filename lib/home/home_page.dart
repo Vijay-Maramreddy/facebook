@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../Posts/status_collection_widget.dart';
 import '../app_style.dart';
 import '../Posts/ImageCollectionWidget.dart';
 import '../base_page.dart';
@@ -30,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Uint8List imageFile;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late bool showOnlyCurrentUserPosts=false;
+  late bool status=false;
 
   @override
   void initState() {
@@ -86,116 +88,155 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: Center(
-        child: Row(
-          children: [
-            Center(
-              child: Container(
-                decoration: customBoxDecoration,
-                margin: const EdgeInsets.all(10),
-                alignment: Alignment.center,
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                child: Column(
-                  children: [
-                    Container(
-                      child: Image.network(
-                        'https://w7.pngwing.com/pngs/788/714/png-transparent-logo-facebook-social-media-business-restaurant-menu-books-blue-text-trademark.png',
-                        width: 300,
-                        height: 200,
+      backgroundColor: Colors.lightBlueAccent,
+      body: Column(
+        // mainAxisAlignment: MainAxisAlignment.center,
+        children:[ SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Center(
+            child: Row(
+              // mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Center(
+                  child: Container(
+                    decoration: customBoxDecoration,
+                    margin: const EdgeInsets.all(10),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                    child: Column(
+                      children: [
+                        Container(
+                          child: Image.network(
+                            'https://w7.pngwing.com/pngs/788/714/png-transparent-logo-facebook-social-media-business-restaurant-menu-books-blue-text-trademark.png',
+                            width: 400,
+                            height: 200,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 400,
+                          child: Container(
+                              decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                              child: TextButton(
+                                  onPressed: uploadImageAndSaveUrl,
+                                  child: const Text(
+                                    "upload post",
+                                    style: TextStyle(color: Colors.white, fontSize: 36),
+                                  ))),
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        SizedBox(
+                          width: 400,
+                          child: Container(
+                              decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                              child: TextButton(
+                                  onPressed:(){
+                                    uploadAStatus();
+                                  },
+                                  child: const Text(
+                                    "Post a Status",
+                                    style: TextStyle(color: Colors.white, fontSize: 36),
+                                  ))),
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        SizedBox(
+                          width: 400,
+                          child: Container(
+                              decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                              child: TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ShowUserDetailsPage(
+                                          email: widget.email,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text(
+                                    "User Profile",
+                                    style: TextStyle(color: Colors.white, fontSize: 36),
+                                  ))),
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        SizedBox(
+                          width: 400,
+                          child: Container(
+                              decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                              child: TextButton(
+                                  onPressed:(){setState(() {
+                                    showOnlyCurrentUserPosts=true;
+                                  });} ,
+                                  child: const Text(
+                                    "Your Posts",
+                                    style: TextStyle(color: Colors.white, fontSize: 36),
+                                  ))),
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        SizedBox(
+                          width: 400,
+                          child: Container(
+                              decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                              child: TextButton(
+                                  onPressed:(){setState(() {
+                                    showOnlyCurrentUserPosts=false;
+                                  });} ,
+                                  child: const Text(
+                                    "All Posts",
+                                    style: TextStyle(color: Colors.white, fontSize: 36),
+                                  ))),
+                        ),
+
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        SizedBox(
+                          width: 400,
+                          child: Container(
+                              decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                              child: TextButton(
+                                  onPressed: () => _signOut(context),
+                                  child: const Text(
+                                    "Log Out",
+                                    style: TextStyle(color: Colors.white, fontSize: 36),
+                                  ))),
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Column(
+                  children:[
+                    Center(
+                      child: Container(
+                        color: Colors.white,
+                        child: StatusCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)
                       ),
                     ),
-                    SizedBox(
-                      width: 300,
+                    Center(
                       child: Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                          child: TextButton(
-                              onPressed: uploadImageAndSaveUrl,
-                              child: const Text(
-                                "upload post",
-                                style: TextStyle(color: Colors.white, fontSize: 36),
-                              ))),
+                        color: Colors.white,
+                        child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)
+                      ),
                     ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    SizedBox(
-                      width: 300,
-                      child: Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                          child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ShowUserDetailsPage(
-                                      email: widget.email,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                "User Profile",
-                                style: TextStyle(color: Colors.white, fontSize: 36),
-                              ))),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    SizedBox(
-                      width: 300,
-                      child: Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                          child: TextButton(
-                              onPressed:(){setState(() {
-                                showOnlyCurrentUserPosts=true;
-                              });} ,
-                              child: const Text(
-                                "Your Posts",
-                                style: TextStyle(color: Colors.white, fontSize: 36),
-                              ))),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    SizedBox(
-                      width: 300,
-                      child: Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                          child: TextButton(
-                              onPressed:(){setState(() {
-                                showOnlyCurrentUserPosts=false;
-                              });} ,
-                              child: const Text(
-                                "All Posts",
-                                style: TextStyle(color: Colors.white, fontSize: 36),
-                              ))),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    SizedBox(
-                      width: 300,
-                      child: Container(
-                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                          child: TextButton(
-                              onPressed: () => _signOut(context),
-                              child: const Text(
-                                "Log Out",
-                                style: TextStyle(color: Colors.white, fontSize: 36),
-                              ))),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                  ],
+                  ]
                 ),
-              ),
+              ],
             ),
-            Center(
-              child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts),
-            ),
-          ],
+          ),
         ),
+      ],
       ),
     );
   }
@@ -217,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return _image;
   }
 
-  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes,int commentsCount, String dateTime, List<String> likedBy, String profileImageUrl, String firstName) async {
+  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes,int commentsCount, String dateTime, List<String> likedBy, String profileImageUrl, String firstName, bool status) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
@@ -231,6 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'dateTime': dateTime,
       'profileImageUrl':profileImageUrl,
       'firstName':firstName,
+      'status':status,
     });
 
     // Insert the new image data at the beginning of the list
@@ -247,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void uploadImageAndSaveUrl() async {
+    print("story");
     imageFile = await pickImageFromGallery();
 
     if (imageFile != null) {
@@ -288,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           print(user.uid);
           print(title);
-          await addImageUrlToFirebase(user.uid,imageUrl, title!,likes,commentsCount,dateTime,likedBy,profileImageUrl,firstName);
+          await addImageUrlToFirebase(user.uid,imageUrl, title!,likes,commentsCount,dateTime,likedBy,profileImageUrl,firstName,status);
           print('Image uploaded. URL: $imageUrl');
           setState(() {});
         } else {
@@ -358,6 +401,12 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       return '';
     }
+  }
+
+  void uploadAStatus() {
+    status=true;
+    print("Status:$status");
+    uploadImageAndSaveUrl();
   }
 }
 

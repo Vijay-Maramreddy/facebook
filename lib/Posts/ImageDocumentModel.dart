@@ -12,6 +12,8 @@ class ImageDocument {
   int commentsCount;
   int sharesCount;
 
+  final bool status;
+
   ImageDocument({
     required this.imageUrl,
     required this.title,
@@ -23,6 +25,7 @@ class ImageDocument {
     this.likes = 0,
     this.commentsCount = 0,
     this.sharesCount = 0,
+    required this.status,
   });
   factory ImageDocument.fromSnapshot(DocumentSnapshot snapshot) {
     Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
@@ -37,6 +40,7 @@ class ImageDocument {
       sharesCount: data['sharesCount'] ?? 0,
       profileImageUrl: data['profileImageUrl'] ?? '',
       firstName: data['firstName'] ?? '',
+      status: data['status']??'',
     );
   }
   // void incrementLikes() {
