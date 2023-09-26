@@ -7,9 +7,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
-import 'ImageDocumentModel.dart';
+import 'image_document_model.dart';
 
 class ImageCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
@@ -27,7 +28,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    print(widget.showOnlyCurrentUserPosts);
     Stream streams=FirebaseFirestore.instance
         .collection('images')
         .where('status',isNotEqualTo:'true')
@@ -43,8 +43,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             .orderBy('dateTime', descending: true)  // Order by dateTime in descending order
             .snapshots(),
         builder: (context, snapshot) {
-          print(snapshot);
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return CircularProgressIndicator();
           }
@@ -60,10 +58,8 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             child: ListView.builder(
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
-                print("inside StreamBuilder and outside return");
                 final document = snapshot.data!.docs[index];
                 String documentId = snapshot.data!.docs[index].id;
-                print(documentId);
                 DateTime now = DateTime.now();
                 var commentDateTime = DateTime.parse(document['dateTime'] as String);
                 var difference = now.difference(commentDateTime);
@@ -198,10 +194,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                             if (imageSnapshot.exists) {
                               ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
                               String documentId = imageSnapshot.id;
-                              print(documentId);
-
                               bool userLiked = retrievedDoc.likedBy.contains(userId);
-                              print(userLiked);
                               if (userLiked) {
                                 decrementLike(retrievedDoc, userId, documentId);
                               } else {
@@ -279,21 +272,35 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
 
       });
 
-      print('Document with ID $documentId deleted successfully.');
     } catch (e) {
       print('Error deleting document: $e');
     }
   }
 
-  void incrementLike(ImageDocument document, String? userId, documentId) {
-    // Increment likes and add userId to the listedBy field
+  void incrementLike(ImageDocument document, String? userId, documentId) async {
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
     document.likes++;
     document.likedBy.add(userId!);
 
-    // Update the document in Firestore
-    FirebaseFirestore.instance.collection('images').doc(documentId).update({
+    await FirebaseFirestore.instance.collection('images').doc(documentId).update({
       'likes': document.likes,
       'likedBy': document.likedBy,
+    });
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String message=" has liked your post";
+    await interactionsCollection.add({
+    'interactedBy': userId,
+    'interactedWith':document.userId,
+    'imageUrl':document.imageUrl,
+    'dateTime':formattedDateTime,
+      'message':message,
+    });
+    String Id=document.userId;
+    await FirebaseFirestore.instance.collection('users').doc(document.userId).update({
+      'dateTime': formattedDateTime,
     });
   }
 
@@ -309,8 +316,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   }
 
   fetchUserDetails({required String userId}) async {
-    print("inside fetchuesrDetails of: $userId");
-
     CollectionReference usersCollection = await FirebaseFirestore.instance.collection('users');
     // Query the collection to find documents that match the provided mobile number
     DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
@@ -320,8 +325,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
         profileImageUrl = data['profileImageUrl'];
         firstName = data['firstName'];
 
-        print('userProfilePicUrl: $profileImageUrl');
-        print('Name: $firstName');
       } else {
         print('Document data is null.');
       }

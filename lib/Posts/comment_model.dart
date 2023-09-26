@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../home/show_user_details_page.dart';
-import 'ImageDocumentModel.dart';
+import 'image_document_model.dart';
 import 'comment_input_screen.dart';
 
 class Comment {

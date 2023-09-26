@@ -9,7 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
-import 'ImageDocumentModel.dart';
+import 'image_document_model.dart';
 
 class StatusCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
@@ -20,27 +20,21 @@ class StatusCollectionWidget extends StatefulWidget {
 }
 
 class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
-
   late String profileImageUrl = '';
   late String firstName = '';
 
-
   @override
   Widget build(BuildContext context) {
-    print(widget.showOnlyCurrentUserPosts);
-    Stream streams=FirebaseFirestore.instance
-        .collection('images')
-        .where('status',isEqualTo:true)
-        .snapshots();
+    Stream streams = FirebaseFirestore.instance.collection('images').where('status', isEqualTo: true).snapshots();
     return SingleChildScrollView(
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('images')
-            .where('status',isEqualTo:true)
+            .where('status', isEqualTo: true)
+            // .orderBy('status')
+            .orderBy('dateTime', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          print(snapshot);
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return CircularProgressIndicator();
           }
@@ -58,13 +52,16 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
               scrollDirection: Axis.horizontal,
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
-                print("inside StreamBuilder and outside return");
                 final document = snapshot.data!.docs[index];
                 String documentId = snapshot.data!.docs[index].id;
-                print(documentId);
                 DateTime now = DateTime.now();
                 var commentDateTime = DateTime.parse(document['dateTime'] as String);
                 var difference = now.difference(commentDateTime);
+                if (difference.inHours >= 10) {
+                  deletePost(documentId);
+                  return null;
+                } else {
+                }
                 String formattedTime = _formatTimeDifference(difference);
 
                 return buildImageCard(
@@ -78,7 +75,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                     profileImageUrl: document['profileImageUrl'],
                     commentsCount: document['commentsCount'],
                     dateTime: formattedTime,
-                    status:document['status'],
+                    status: document['status'],
                   ),
                   documentsId: documentId,
                 );
@@ -86,7 +83,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
             ),
           );
         },
-
       ),
     );
   }
@@ -95,13 +91,12 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     User? user = FirebaseAuth.instance.currentUser;
     String? CurrentuserId = user?.uid;
     late bool alreadyLiked = (document.likedBy.contains(CurrentuserId));
-    bool currentUserIsViewingUser=false;
-    if(document.userId==CurrentuserId)
-    {
-      currentUserIsViewingUser=true;
+    bool currentUserIsViewingUser = false;
+    if (document.userId == CurrentuserId) {
+      currentUserIsViewingUser = true;
     }
     return Visibility(
-      visible:isVisible(document.userId),
+      visible: isVisible(document.userId),
       child: Container(
         // margin: EdgeInsets.all(10.0),
         // padding: EdgeInsets.all(10.0),
@@ -156,13 +151,12 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                           style: TextStyle(fontSize: 14.0),
                         ),
                         Visibility(
-                          visible: currentUserIsViewingUser ,
+                          visible: currentUserIsViewingUser,
                           child: IconButton(
-                              onPressed: (){
+                              onPressed: () {
                                 deletePost(documentsId);
                               },
-                              icon: Icon(Icons.delete)
-                          ),
+                              icon: Icon(Icons.delete)),
                         ),
                       ],
                     ),
@@ -181,98 +175,107 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                   context: context,
                   builder: (BuildContext context) {
                     return Dialog(
-                      child: Column(
-                        children:[
-
-                          IconButton(onPressed: (){ Navigator.pop(context);}, icon: Icon(Icons.close)),
-                          SizedBox(height: 50,),
-                          Text('Title: ${document.title}',style: TextStyle(fontSize: 40,color: Colors.blue),),
-                          SizedBox(height: 20,),
-                          Container(
+                      child: Column(children: [
+                        IconButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            icon: Icon(Icons.close)),
+                        SizedBox(
+                          height: 50,
+                        ),
+                        Text(
+                          'Title: ${document.title}',
+                          style: TextStyle(fontSize: 40, color: Colors.blue),
+                        ),
+                        SizedBox(
+                          height: 20,
+                        ),
+                        Container(
                           padding: EdgeInsets.all(16.0),
                           width: dialogWidth,
                           height: dialogHeight,
-                          child: Image.network(document.imageUrl,width: 1600,height: 1600,fit: BoxFit.contain,),
-                        ),
-                          StatefulBuilder(
-                            builder: (BuildContext context, StateSetter setState) {
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
-                                        onPressed: () async {
-                                          User? user = FirebaseAuth.instance.currentUser;
-                                          String? userId = user?.uid;
-
-                                          DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
-
-                                          if (imageSnapshot.exists) {
-                                            ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-                                            String documentId = imageSnapshot.id;
-                                            print(documentId);
-
-                                            bool userLiked = retrievedDoc.likedBy.contains(userId);
-                                            print(userLiked);
-                                            if (userLiked) {
-                                              decrementLike(retrievedDoc, userId, documentId);
-                                            } else {
-                                              incrementLike(retrievedDoc, userId, documentId);
-                                            }
-
-                                            setState(() {
-                                              alreadyLiked = !alreadyLiked;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                      Visibility(
-                                        visible: isCountVisible(document.userId),
-                                          child: Text('Likes: ${document.likes}'),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.comment),
-                                        onPressed: () {
-                                          showModalBottomSheet(
-                                            context: context,
-                                            builder: (BuildContext context) {
-                                              return CommentInputSheet(
-                                                documentsId: documentsId,
-                                              );
-                                            },
-                                          );
-                                        },
-                                      ),
-                                      Visibility(
-                                        visible: isCountVisible(document.userId),
-                                        child: Text('Comments: ${document.commentsCount}'),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.share),
-                                        onPressed: () {},
-                                      ),
-                                      Text('Shares: ${document.sharesCount}'),
-                                    ],
-                                  ),
-
-                                  // ... Existing code ...
-                                ],
-                              );
-                            },
+                          child: Image.network(
+                            document.imageUrl,
+                            width: 1600,
+                            height: 1600,
+                            fit: BoxFit.contain,
                           ),
+                        ),
+                        StatefulBuilder(
+                          builder: (BuildContext context, StateSetter setState) {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
+                                      onPressed: () async {
+                                        User? user = FirebaseAuth.instance.currentUser;
+                                        String? userId = user?.uid;
 
-                    ]
-                      ),
+                                        DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
+
+                                        if (imageSnapshot.exists) {
+                                          ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+                                          String documentId = imageSnapshot.id;
+
+                                          bool userLiked = retrievedDoc.likedBy.contains(userId);
+                                          if (userLiked) {
+                                            decrementLike(retrievedDoc, userId, documentId);
+                                          } else {
+                                            incrementLike(retrievedDoc, userId, documentId);
+                                          }
+                                          setState(() {
+                                            alreadyLiked = !alreadyLiked;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                    Visibility(
+                                      visible: isCountVisible(document.userId),
+                                      child: Text('Likes: ${document.likes}'),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.comment),
+                                      onPressed: () {
+                                        showModalBottomSheet(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return CommentInputSheet(
+                                              documentsId: documentsId,
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                    Visibility(
+                                      visible: isCountVisible(document.userId),
+                                      child: Text('Comments: ${document.commentsCount}'),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.share),
+                                      onPressed: () {},
+                                    ),
+                                    Text('Shares: ${document.sharesCount}'),
+                                  ],
+                                ),
+
+                                // ... Existing code ...
+                              ],
+                            );
+                          },
+                        ),
+                      ]),
                     );
                   },
                 );
@@ -286,46 +289,38 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                 ),
               ),
             ),
-
           ],
         ),
       ),
     );
   }
-  bool isVisible(String userId){
-    if(widget.showOnlyCurrentUserPosts==true)
-    {
+
+  bool isVisible(String userId) {
+    if (widget.showOnlyCurrentUserPosts == true) {
       User? user = FirebaseAuth.instance.currentUser;
       String? CurrentuserId = user?.uid;
-      if(CurrentuserId!=userId)
-      {
+      if (CurrentuserId != userId) {
         return false;
       }
     }
     return true;
   }
+
   isCountVisible(String userId) {
     User? user = FirebaseAuth.instance.currentUser;
     String? CurrentuserId = user?.uid;
-    if(CurrentuserId==userId)
-      {
-        return true;
-      }
+    if (CurrentuserId == userId) {
+      return true;
+    }
     return false;
   }
 
   Future<void> deletePost(String documentId) async {
     try {
       // Access the collection and delete the document with the given ID
-      await FirebaseFirestore.instance
-          .collection('images')
-          .doc(documentId)
-          .delete();
-      setState(() {
+      await FirebaseFirestore.instance.collection('images').doc(documentId).delete();
+      setState(() {});
 
-      });
-
-      print('Document with ID $documentId deleted successfully.');
     } catch (e) {
       print('Error deleting document: $e');
     }
@@ -355,8 +350,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   }
 
   fetchUserDetails({required String userId}) async {
-    print("inside fetchuesrDetails of: $userId");
-
     CollectionReference usersCollection = await FirebaseFirestore.instance.collection('users');
     // Query the collection to find documents that match the provided mobile number
     DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
@@ -365,9 +358,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       if (data != null) {
         profileImageUrl = data['profileImageUrl'];
         firstName = data['firstName'];
-
-        print('userProfilePicUrl: $profileImageUrl');
-        print('Name: $firstName');
       } else {
         print('Document data is null.');
       }
@@ -376,6 +366,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       showAlert(context, message);
     }
   }
+
   String _formatTimeDifference(Duration difference) {
     if (difference.inMinutes < 60) {
       return '${difference.inMinutes} minutes ago';
@@ -385,10 +376,4 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       return '${difference.inDays} days ago';
     }
   }
-
-
 }
-
-
-
-

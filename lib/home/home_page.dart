@@ -9,10 +9,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../Chat/chat_page.dart';
 import '../Posts/status_collection_widget.dart';
 import '../app_style.dart';
-import '../Posts/ImageCollectionWidget.dart';
+import '../Posts/image_collection_widget.dart';
 import '../base_page.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -63,9 +65,10 @@ class _HomeScreenState extends State<HomeScreen> {
         flexibleSpace: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.facebook),
-              color: Colors.blue, // Customize the color as needed
+              icon: const Icon(Icons.chat),
+              color: Colors.white, // Customize the color as needed
               onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context)=>const ChatPage()));
                 // Add your left-end icon onPressed functionality here.
               },
             ),
@@ -232,6 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ]
                 ),
+                // Align(
+                //   alignment: Alignment.topLeft,
+                //     child: IconButton(onPressed: (){}, icon: Icon(Icons.send))
+                // ),
               ],
             ),
           ),
@@ -243,6 +250,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _signOut(BuildContext context) async {
     try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
       await _auth.signOut();
       // Navigate to the login or home page after sign out
       // Replace with the appropriate route in your app
@@ -274,22 +283,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'firstName':firstName,
       'status':status,
     });
-
-    // Insert the new image data at the beginning of the list
-    // imageDataList.insert(
-    //   0,
-    //   ImageData(
-    //     imageUrl: imageUrl,
-    //     likes: likes,
-    //     comments: comments,
-    //     isLiked: false,
-    //     isCommentVisible: false,
-    //   ),
-    // );
   }
 
   void uploadImageAndSaveUrl() async {
-    print("story");
     imageFile = await pickImageFromGallery();
 
     if (imageFile != null) {
@@ -300,8 +296,6 @@ class _HomeScreenState extends State<HomeScreen> {
       late String profileImageUrl;
       late String firstName;
       int commentsCount=0;
-      // String? title = await _showImagePickerDialog();
-      print("hi $title");
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime= DateFormat('yyyy-MM-dd HH:mm').format(now);
@@ -318,9 +312,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
             if (data != null) {
 
-               profileImageUrl= data['profileImageUrl'] ;
+              profileImageUrl= data['profileImageUrl'] ;
               firstName = data['firstName'];
-
             } else {
               print('Document data is null.');
             }
@@ -329,10 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
             String message="user details not found";
             showAlert(context, message);
           }
-          print(user.uid);
-          print(title);
           await addImageUrlToFirebase(user.uid,imageUrl, title!,likes,commentsCount,dateTime,likedBy,profileImageUrl,firstName,status);
-          print('Image uploaded. URL: $imageUrl');
           setState(() {});
         } else {
           print('Error: User is not authenticated.');
@@ -346,12 +336,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<String> uploadImageToStorage(String childName, Uint8List file) async {
-    print("inside upload image to storage");
     Reference ref = _storage.ref().child(childName);
     UploadTask uploadTask = ref.putData(file);
     TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await snapshot.ref.getDownloadURL();
-    print("end of upload image to storage: downloadUrl is: $downloadUrl");
     return downloadUrl;
   }
 
@@ -385,10 +373,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  // Do something with the picked image and title
-                  // For demonstration, we'll just print the title
-                  print('Title: $title');
-
                   Navigator.pop(context, title);
                 },
                 child: const Text('Save'),
@@ -405,7 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void uploadAStatus() {
     status=true;
-    print("Status:$status");
     uploadImageAndSaveUrl();
   }
 }

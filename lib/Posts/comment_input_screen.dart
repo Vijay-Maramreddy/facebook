@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'ImageDocumentModel.dart';
+import 'image_document_model.dart';
 import 'comment_model.dart';
 
 class CommentInputSheet extends StatefulWidget {
@@ -157,7 +157,6 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
             SizedBox(height: 8),
             Visibility(
               visible: commentsVisible,
-          // isCommentsVisible(widget.documentsId),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: _comments.map((comment) {
@@ -185,7 +184,6 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     else {
       return true;
     }
-    // retrievedDoc.commentsCount++;
   }
 }
 
