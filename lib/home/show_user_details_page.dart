@@ -196,7 +196,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                 fit: BoxFit.cover,
                               ),
                             )
-                          : Icon(
+                          : const Icon(
                               Icons.camera_alt,
                               size: 80, // Increased size
                               color: Colors.blue,

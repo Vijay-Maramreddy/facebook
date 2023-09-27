@@ -1,6 +1,5 @@
 import 'package:facebook/Authentication/password_reset.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,10 +48,8 @@ class _LoginPageState extends State<LoginPage> {
                             alignment: Alignment.centerLeft,
                             child: const Text("FaceBook", style: TextStyle(color: Colors.blue, fontSize: 32),),
                           ),
-                          Container(
-                            child: const Text("Facebook helps you connect and share with the people in your life",
-                              style: TextStyle(color: Colors.black, fontSize: 24),),
-                          ),
+                          const Text("Facebook helps you connect and share with the people in your life",
+                            style: TextStyle(color: Colors.black, fontSize: 24),),
                         ],
                       ),
                     ),
@@ -126,11 +123,9 @@ class _LoginPageState extends State<LoginPage> {
                                 child: const Text("Login", style: TextStyle(color: Colors.white, fontSize: 24),),
                               )
                           ),
-                          Container(
-                            child: TextButton(child: const Text("Forgotten Password?"), onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => PasswordReset()));
-                            }),
-                          ),
+                          TextButton(child: const Text("Forgotten Password?"), onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const PasswordReset()));
+                          }),
                           const Divider(
                             color: Colors.black12, // You can customize the color here
                             thickness: 1,
@@ -212,9 +207,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<UserData> fetchUserDataByEmail(String email) async {
-    // Perform actual user data retrieval based on the email
-    // Replace this with your actual logic to fetch user data from a database or storage
-    // For demonstration, create a mock UserData object
     return UserData(username: '', email: email);
   }
 }

@@ -1,11 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../home/show_user_details_page.dart';
 import 'image_document_model.dart';
-import 'comment_input_screen.dart';
 
 class Comment {
   String comment;
@@ -30,7 +27,7 @@ class Comment {
 class CommentWidget extends StatefulWidget {
   final Comment comment;
 
-  CommentWidget(this.comment);
+  const CommentWidget(this.comment, {super.key});
 
   @override
   _CommentWidgetState createState() => _CommentWidgetState();
@@ -59,77 +56,75 @@ class _CommentWidgetState extends State<CommentWidget> {
     return Visibility(
       visible: isNotDeleted,
       child: Container(
-          padding: EdgeInsets.all(8.0),
-          margin: EdgeInsets.symmetric(vertical: 8.0),
+          padding: const EdgeInsets.all(8.0),
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(10.0),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // ... Other parts of the widget ...
-            Container(
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ShowUserDetailsPage(
-                            userId: widget.comment.userId,
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShowUserDetailsPage(
+                          userId: widget.comment.userId,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 30, // Increased width
+                        height: 30, // Increased height
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.blue,
+                            width: 0.1,
                           ),
                         ),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 30, // Increased width
-                          height: 30, // Increased height
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.blue,
-                              width: 0.1,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: Image.network(
-                              widget.comment.profileImageUrl,
-                              width: 30, // Increased width
-                              height: 30, // Increased height
-                              fit: BoxFit.cover,
-                            ),
+                        child: ClipOval(
+                          child: Image.network(
+                            widget.comment.profileImageUrl,
+                            width: 30, // Increased width
+                            height: 30, // Increased height
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        Text(
-                          widget.comment.firstName,
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        SizedBox(width: 8.0),
-                        Text(
-                          widget.comment.dateTime,
-                          style: TextStyle(fontSize: 14.0),
-                        ),
-                      ],
-                    ),
+                      ),
+                      Text(
+                        widget.comment.firstName,
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      const SizedBox(width: 8.0),
+                      Text(
+                        widget.comment.dateTime,
+                        style: const TextStyle(fontSize: 14.0),
+                      ),
+                    ],
                   ),
-                  Visibility(
-                    visible: currentUserIsCommentedUser,
-                    child: IconButton(
-                      onPressed: () {
-                        deleteComment(widget.comment.documentId, widget.comment.imageId);
-                      },
-                      icon: Icon(Icons.delete),
-                    ),
-                  )
-                ],
-              ),
+                ),
+                Visibility(
+                  visible: currentUserIsCommentedUser,
+                  child: IconButton(
+                    onPressed: () {
+                      deleteComment(widget.comment.documentId, widget.comment.imageId);
+                    },
+                    icon: const Icon(Icons.delete),
+                  ),
+                )
+              ],
             ),
-            SizedBox(height: 4.0),
+            const SizedBox(height: 4.0),
             Text(
               'Comment: ${widget.comment.comment}',
-              style: TextStyle(fontSize: 16.0),
+              style: const TextStyle(fontSize: 16.0),
             ),
           ])),
     );

@@ -11,14 +11,14 @@ import 'comment_model.dart';
 class CommentInputSheet extends StatefulWidget {
   final String? documentsId;
 
-  CommentInputSheet({Key? key, required this.documentsId}) : super(key: key);
+  const CommentInputSheet({Key? key, required this.documentsId}) : super(key: key);
 
   @override
   _CommentInputSheetState createState() => _CommentInputSheetState();
 }
 
 class _CommentInputSheetState extends State<CommentInputSheet> {
-  TextEditingController _commentController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
   List<Comment> _comments = [];
   late String profileImageUrl;
   late String firstName;
@@ -158,20 +158,20 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: Container(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _commentController,
-              decoration: InputDecoration(labelText: 'Enter your comment'),
+              decoration: const InputDecoration(labelText: 'Enter your comment'),
             ),
-            SizedBox(height: 16.0),
+            const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: _saveComment,
-              child: Text('Save Comment'),
+              child: const Text('Save Comment'),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Visibility(
               visible: commentsVisible,
               child: Column(
@@ -191,11 +191,11 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
     bool status=retrievedDoc.status;
     User? user = FirebaseAuth.instance.currentUser;
-    String? CurrentuserId = user?.uid;
-    if(status==true && retrievedDoc.userId!=CurrentuserId){
+    String? currentUserId = user?.uid;
+    if(status==true && retrievedDoc.userId!=currentUserId){
       print("This is the Status :$status");
-      String retrieved_doc_user=retrievedDoc.userId;
-      print("this is retrieved doc userId :$retrieved_doc_user and currentuser is $CurrentuserId");
+      String retrievedDocUser=retrievedDoc.userId;
+      print("this is retrieved doc userId :$retrievedDocUser and currentuser is $currentUserId");
       return false;
     }
     else {

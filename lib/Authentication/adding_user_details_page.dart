@@ -10,7 +10,7 @@ import '../home/home_page.dart';
 class UserDetailsPage extends StatefulWidget {
   final String mobileNumber;
 
-  UserDetailsPage({required this.mobileNumber});
+  const UserDetailsPage({super.key, required this.mobileNumber});
 
   @override
   _UserDetailsPageState createState() => _UserDetailsPageState();
@@ -67,19 +67,19 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('User Details'),
+        title: const Text('User Details'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
             Text(
               'Mobile Number: ${widget.mobileNumber}',
-              style: TextStyle(fontSize: 24),
+              style: const TextStyle(fontSize: 24),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Container(
               decoration: customBoxDecoration,
               margin: const EdgeInsets.all(10),
@@ -183,7 +183,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
               child: ElevatedButton(
                 autofocus: mounted,
                 onPressed: _registerUser,
-                child: Text('Register',style: TextStyle(color: Colors.white,fontSize: 32),),
+                child: const Text('Register',style: TextStyle(color: Colors.white,fontSize: 32),),
               ),
             ),
           ],
