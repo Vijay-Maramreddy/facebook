@@ -16,7 +16,8 @@ import 'all_interactions.dart';
 class ChatWidget extends StatefulWidget {
   final Map<String, dynamic>? documentData;
   final String? documentId;
-  ChatWidget({this.documentData, this.documentId});
+  final String? groupId;
+  ChatWidget({super.key, this.documentData, this.documentId, this.groupId});
 
   @override
   State<ChatWidget> createState() => _ChatWidgetState();
@@ -26,15 +27,15 @@ class _ChatWidgetState extends State<ChatWidget> {
   TextEditingController _messageController = TextEditingController();
   Uint8List? image;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  Map<String, dynamic>? documentData;
+
+  
 
   @override
   Widget build(BuildContext context) {
     User? user = FirebaseAuth.instance.currentUser;
     String? CurrentuserId = user?.uid;
     print(widget.documentId);
-    getDocumentById(widget.documentId);
-    if (documentData == null) {
+    if (widget.documentData == null) {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Container(
@@ -83,7 +84,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                           ),
                           child: ClipOval(
                             child: Image.network(
-                              documentData!['profileImageUrl'] ?? '',
+                              widget.documentData!['profileImageUrl'] ?? '',
                               width: 30,
                               height: 30,
                               fit: BoxFit.cover,
@@ -91,7 +92,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                           ),
                         ),
                         Text(
-                          documentData!['firstName'] ?? '',
+                          widget.documentData!['firstName'] ?? '',
                           style: TextStyle(fontSize: 20),
                         ),
                       ],
@@ -103,7 +104,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                   child: Container(
                     height: 500,
                     child: Center(
-                      child:AllInteractions(interactedBy:CurrentuserId,interactedWith:widget.documentId),
+                      child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId,groupId:widget.groupId),
                     ),
                   ),
                 ),
@@ -113,7 +114,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                     margin: const EdgeInsets.all(10),
                     alignment: Alignment.center,
                     padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                    width: 700,
+                    width: 850,
                     height: 40,
                     child: Row(
                       children: [
@@ -145,6 +146,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
                         String? imageUrl = '';
                         String text = _messageController.text;
+                        String groupId=combineIds(CurrentuserId,widget.documentId);
                         if (text.isNotEmpty) {
                           await interactionsCollection.add({
                             'interactedBy': CurrentuserId,
@@ -152,8 +154,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                             'imageUrl': imageUrl,
                             'dateTime': formattedDateTime,
                             'message': text,
+                            'groupId':groupId,
                           });
-                          _messageController.clear(); // Clear the text field after sending the message
+                          _messageController.clear();
+                          // setState(() {}); // Clear the text field after sending the message
                         }
                       },
                       icon: Icon(Icons.send)),
@@ -174,21 +178,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     return downloadUrl;
   }
 
-  Future<void> getDocumentById(String? documentId) async {
-    try {
-      CollectionReference collection = FirebaseFirestore.instance.collection('users');
-
-      DocumentSnapshot documentSnapshot = await collection.doc(documentId).get();
-
-      if (documentSnapshot.exists) {
-        documentData = documentSnapshot.data() as Map<String, dynamic>;
-      } else {
-        print('No such document with ID: $documentId');
-      }
-    } catch (e) {
-      print('Error retrieving document: $e');
-    }
-  }
 
   void uploadImageAndSaveUrl() async {
     image = await pickImageFromGallery();
@@ -202,6 +191,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
       String? CurrentuserId = user?.uid;
+      String groupId=combineIds(CurrentuserId,widget.documentId);
       if (imageUrl != null) {
         await interactionsCollection.add({
           'interactedBy': CurrentuserId,
@@ -209,6 +199,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           'imageUrl': imageUrl,
           'dateTime': dateTime,
           'message': message,
+          'groupId':groupId,
         });
       }
     } else {
@@ -264,5 +255,6 @@ class _ChatWidgetState extends State<ChatWidget> {
       return '';
     }
   }
-}
 
+
+}

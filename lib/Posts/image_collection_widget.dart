@@ -289,16 +289,19 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
       'likedBy': document.likedBy,
     });
 
+    String groupId=combineIds(userId,document.userId);
+
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-    String message=" has liked your post";
+    String message="liked the post";
     await interactionsCollection.add({
     'interactedBy': userId,
     'interactedWith':document.userId,
     'imageUrl':document.imageUrl,
     'dateTime':formattedDateTime,
       'message':message,
+      'groupId':groupId,
     });
-    String Id=document.userId;
+    // String Id=document.userId;
     await FirebaseFirestore.instance.collection('users').doc(document.userId).update({
       'dateTime': formattedDateTime,
     });
@@ -342,6 +345,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
       return '${difference.inDays} days ago';
     }
   }
+
 }
 
 

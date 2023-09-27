@@ -112,4 +112,17 @@ Widget imagePicker(bool imageList, Function() onClick, String title1, String tit
           )));
 }
 
+String combineIds(String? currentuserId, String? documentId) {
+  List<String> sortedStrings = sortStrings(currentuserId!, documentId!);
+  String str1=sortedStrings[0];
+  String str2=sortedStrings[1];
+  String groupId='$str1-$str2';
+  return groupId;
+}
 
+List<String> sortStrings(String str1, String str2) {
+  List<String> stringsList = [str1, str2];
+  stringsList.sort(); // Sort the list lexicographically
+
+  return stringsList;
+}

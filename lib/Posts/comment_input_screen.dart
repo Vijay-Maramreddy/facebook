@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../base_page.dart';
 import 'image_document_model.dart';
 import 'comment_model.dart';
 
@@ -100,14 +101,30 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       'dateTime': formattedDateTime,
     };
 
+
+    DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).get();
+    ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+
+    String groupId=combineIds(userId,retrievedDoc.userId);
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    // String message="liked your post";
+    await interactionsCollection.add({
+      'interactedBy': userId,
+      'interactedWith':retrievedDoc.userId,
+      'imageUrl':retrievedDoc.imageUrl,
+      'dateTime':formattedDateTime,
+      'message':comment,
+      'groupId':groupId,
+    });
+
     // Save the comment to the Firestore collection
     await FirebaseFirestore.instance
         .collection('images')
         .doc(widget.documentsId) // Replace with the actual image document ID
         .collection('comments')
         .add(commentData);
-    DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).get();
-    ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+
     retrievedDoc.commentsCount++;
 
     FirebaseFirestore.instance.collection('images').doc(widget.documentsId).update({

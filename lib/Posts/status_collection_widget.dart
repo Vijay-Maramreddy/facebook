@@ -57,7 +57,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                 DateTime now = DateTime.now();
                 var commentDateTime = DateTime.parse(document['dateTime'] as String);
                 var difference = now.difference(commentDateTime);
-                if (difference.inHours >= 10) {
+                if (difference.inHours >= 24) {
                   deletePost(documentId);
                   return null;
                 } else {
@@ -98,12 +98,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     return Visibility(
       visible: isVisible(document.userId),
       child: Container(
-        // margin: EdgeInsets.all(10.0),
-        // padding: EdgeInsets.all(10.0),
-        // decoration: BoxDecoration(
-        //   border: Border.all(color: Colors.black),
-        //   borderRadius: BorderRadius.circular(50.0),
-        // ),
         child: Column(
           children: [
             Container(
