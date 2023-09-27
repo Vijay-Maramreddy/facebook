@@ -1,19 +1,16 @@
 import 'dart:async';
-import 'dart:html';
-import 'dart:typed_data';
-
 import 'package:facebook/Posts/comment_input_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import 'image_document_model.dart';
 
 class StatusCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
-  StatusCollectionWidget({required this.showOnlyCurrentUserPosts});
+  StatusCollectionWidget({super.key, required this.showOnlyCurrentUserPosts});
 
   @override
   _StatusCollectionWidgetState createState() => _StatusCollectionWidgetState();
@@ -36,16 +33,16 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
+            return const CircularProgressIndicator();
           }
           if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Text('No data available');
+            return const Text('No data available');
           }
           return Container(
-            padding: EdgeInsets.fromLTRB(0, 0, 10, 0),
+            padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
             width: 800,
             height: 200,
             child: ListView.builder(
@@ -89,202 +86,196 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
 
   Widget buildImageCard(ImageDocument document, {required String documentsId}) {
     User? user = FirebaseAuth.instance.currentUser;
-    String? CurrentuserId = user?.uid;
-    late bool alreadyLiked = (document.likedBy.contains(CurrentuserId));
+    String? currentUserId = user?.uid;
+    late bool alreadyLiked = (document.likedBy.contains(currentUserId));
     bool currentUserIsViewingUser = false;
-    if (document.userId == CurrentuserId) {
+    if (document.userId == currentUserId) {
       currentUserIsViewingUser = true;
     }
     return Visibility(
       visible: isVisible(document.userId),
-      child: Container(
-        child: Column(
-          children: [
-            Container(
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ShowUserDetailsPage(
-                            userId: document.userId,
-                          ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ShowUserDetailsPage(
+                        userId: document.userId,
+                      ),
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 30, // Increased width
+                      height: 30, // Increased height
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.blue,
+                          width: 0.1,
                         ),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Container(
+                      ),
+                      child: ClipOval(
+                        child: Image.network(
+                          document.profileImageUrl,
                           width: 30, // Increased width
                           height: 30, // Increased height
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.blue,
-                              width: 0.1,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: Image.network(
-                              document.profileImageUrl,
-                              width: 30, // Increased width
-                              height: 30, // Increased height
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                          fit: BoxFit.cover,
                         ),
-                        Text(
-                          document.firstName,
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        SizedBox(width: 8.0),
-                        Text(
-                          document.dateTime,
-                          style: TextStyle(fontSize: 14.0),
-                        ),
-                        Visibility(
-                          visible: currentUserIsViewingUser,
-                          child: IconButton(
-                              onPressed: () {
-                                deletePost(documentsId);
-                              },
-                              icon: Icon(Icons.delete)),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                double screenWidth = MediaQuery.of(context).size.width;
-                double screenHeight = MediaQuery.of(context).size.height;
-                double dialogWidth = screenWidth * 0.5; // Adjust the percentage as needed
-                double dialogHeight = screenHeight * 0.5; // Adjust the percentage as needed
-                // Show a dialog or a full-screen view to display the image in a larger format
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return Dialog(
-                      child: Column(children: [
-                        IconButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            icon: Icon(Icons.close)),
-                        SizedBox(
-                          height: 50,
-                        ),
-                        Text(
-                          'Title: ${document.title}',
-                          style: TextStyle(fontSize: 40, color: Colors.blue),
-                        ),
-                        SizedBox(
-                          height: 20,
-                        ),
-                        Container(
-                          padding: EdgeInsets.all(16.0),
-                          width: dialogWidth,
-                          height: dialogHeight,
-                          child: Image.network(
-                            document.imageUrl,
-                            width: 1600,
-                            height: 1600,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        StatefulBuilder(
-                          builder: (BuildContext context, StateSetter setState) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
-                                      onPressed: () async {
-                                        User? user = FirebaseAuth.instance.currentUser;
-                                        String? userId = user?.uid;
-
-                                        DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
-
-                                        if (imageSnapshot.exists) {
-                                          ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-                                          String documentId = imageSnapshot.id;
-
-                                          bool userLiked = retrievedDoc.likedBy.contains(userId);
-                                          if (userLiked) {
-                                            decrementLike(retrievedDoc, userId, documentId);
-                                          } else {
-                                            incrementLike(retrievedDoc, userId, documentId);
-                                          }
-                                          setState(() {
-                                            alreadyLiked = !alreadyLiked;
-                                          });
-                                        }
-                                      },
-                                    ),
-                                    Visibility(
-                                      visible: isCountVisible(document.userId),
-                                      child: Text('Likes: ${document.likes}'),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.comment),
-                                      onPressed: () {
-                                        showModalBottomSheet(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            return CommentInputSheet(
-                                              documentsId: documentsId,
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    Visibility(
-                                      visible: isCountVisible(document.userId),
-                                      child: Text('Comments: ${document.commentsCount}'),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.share),
-                                      onPressed: () {},
-                                    ),
-                                    Text('Shares: ${document.sharesCount}'),
-                                  ],
-                                ),
-
-                                // ... Existing code ...
-                              ],
-                            );
+                    Text(
+                      document.firstName,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    const SizedBox(width: 8.0),
+                    Text(
+                      document.dateTime,
+                      style: const TextStyle(fontSize: 14.0),
+                    ),
+                    Visibility(
+                      visible: currentUserIsViewingUser,
+                      child: IconButton(
+                          onPressed: () {
+                            deletePost(documentsId);
                           },
-                        ),
-                      ]),
-                    );
-                  },
-                );
-              },
-              child: ClipOval(
-                child: Image.network(
-                  document.imageUrl,
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.cover,
+                          icon: const Icon(Icons.delete)),
+                    ),
+                  ],
                 ),
               ),
+            ],
+          ),
+          GestureDetector(
+            onTap: () {
+              double screenWidth = MediaQuery.of(context).size.width;
+              double screenHeight = MediaQuery.of(context).size.height;
+              double dialogWidth = screenWidth * 0.5; // Adjust the percentage as needed
+              double dialogHeight = screenHeight * 0.5; // Adjust the percentage as needed
+              // Show a dialog or a full-screen view to display the image in a larger format
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return Dialog(
+                    child: Column(children: [
+                      IconButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon: const Icon(Icons.close)),
+                      const SizedBox(
+                        height: 50,
+                      ),
+                      Text(
+                        'Title: ${document.title}',
+                        style: const TextStyle(fontSize: 40, color: Colors.blue),
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(16.0),
+                        width: dialogWidth,
+                        height: dialogHeight,
+                        child: Image.network(
+                          document.imageUrl,
+                          width: 1600,
+                          height: 1600,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setState) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
+                                    onPressed: () async {
+                                      User? user = FirebaseAuth.instance.currentUser;
+                                      String? userId = user?.uid;
+
+                                      DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
+
+                                      if (imageSnapshot.exists) {
+                                        ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+                                        String documentId = imageSnapshot.id;
+
+                                        bool userLiked = retrievedDoc.likedBy.contains(userId);
+                                        if (userLiked) {
+                                          decrementLike(retrievedDoc, userId, documentId);
+                                        } else {
+                                          incrementLike(retrievedDoc, userId, documentId);
+                                        }
+                                        setState(() {
+                                          alreadyLiked = !alreadyLiked;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  Visibility(
+                                    visible: isCountVisible(document.userId),
+                                    child: Text('Likes: ${document.likes}'),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.comment),
+                                    onPressed: () {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return CommentInputSheet(
+                                            documentsId: documentsId,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  Visibility(
+                                    visible: isCountVisible(document.userId),
+                                    child: Text('Comments: ${document.commentsCount}'),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.share),
+                                    onPressed: () {},
+                                  ),
+                                  Text('Shares: ${document.sharesCount}'),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ]),
+                  );
+                },
+              );
+            },
+            child: ClipOval(
+              child: Image.network(
+                document.imageUrl,
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -302,8 +293,8 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
 
   isCountVisible(String userId) {
     User? user = FirebaseAuth.instance.currentUser;
-    String? CurrentuserId = user?.uid;
-    if (CurrentuserId == userId) {
+    String? currentUserId = user?.uid;
+    if (currentUserId == userId) {
       return true;
     }
     return false;
@@ -320,8 +311,10 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     }
   }
 
-  void incrementLike(ImageDocument document, String? userId, documentId) {
+  void incrementLike(ImageDocument document, String? userId, documentId) async {
     // Increment likes and add userId to the listedBy field
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
     document.likes++;
     document.likedBy.add(userId!);
 
@@ -329,6 +322,18 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     FirebaseFirestore.instance.collection('images').doc(documentId).update({
       'likes': document.likes,
       'likedBy': document.likedBy,
+    });
+    String groupId=combineIds(userId,document.userId);
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String message="liked the status";
+    await interactionsCollection.add({
+      'interactedBy': userId,
+      'interactedWith':document.userId,
+      'imageUrl':document.imageUrl,
+      'dateTime':formattedDateTime,
+      'message':message,
+      'groupId':groupId,
     });
   }
 
@@ -344,7 +349,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   }
 
   fetchUserDetails({required String userId}) async {
-    CollectionReference usersCollection = await FirebaseFirestore.instance.collection('users');
+    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
     // Query the collection to find documents that match the provided mobile number
     DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
     if (documentSnapshot.exists) {
