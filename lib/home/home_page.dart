@@ -15,6 +15,7 @@ import '../Posts/status_collection_widget.dart';
 import '../app_style.dart';
 import '../Posts/image_collection_widget.dart';
 import '../base_page.dart';
+import '../friend_request_page.dart';
 
 class HomeScreen extends StatefulWidget {
   final String email;
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void initState() {
-     fetchUsers();
+    fetchUsers();
 
     super.initState();
     //
@@ -72,15 +73,26 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.person),
-                color: Colors.blue,
+                color: Colors.white,
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          ShowUserDetailsPage(
-                            email: widget.email,
-                          ),
+                      builder: (context) => ShowUserDetailsPage(
+                        email: widget.email,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.mobile_friendly_rounded),
+                color: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FriendRequestPage(),
                     ),
                   );
                 },
@@ -109,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                       child: Column(
                         children: [
-                          Stack(children:<Widget> [
+                          Stack(children: <Widget>[
                             Container(
                               width: 400,
                               height: 620,
@@ -132,62 +144,71 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     if (filteredNames.isNotEmpty)
                                       Container(
-                                        height: 150, // Set a fixed height or adjust as needed
-                                        child: ListView.builder(
-                                          itemCount: filteredNames.length,
-                                          itemBuilder: (context, index) {
-                                            return FutureBuilder<DocumentSnapshot?>(
-                                              future: fetchData(filteredNames[index]),
-                                              builder: (context, snapshot) {
-                                                if (snapshot.connectionState == ConnectionState.waiting) {
-                                                  return CircularProgressIndicator(); // or a loading indicator
-                                                } else if (snapshot.hasError) {
-                                                  return Text('Error: ${snapshot.error}');
-                                                } else if (!snapshot.hasData || snapshot.data == null) {
-                                                  return Text('No user found with the specified first name.');
-                                                } else {
-                                                  DocumentSnapshot userDocument = snapshot.data!;
-                                                  return Container(
-                                                    height: 40,
-                                                    child: GestureDetector(
-                                                      onTap: (){},
-                                                      child: Row(
-                                                        children: [
-                                                          Container(
-                                                            width: 30,
-                                                            height: 30,
-                                                            decoration: BoxDecoration(
-                                                              shape: BoxShape.circle,
-                                                              border: Border.all(
-                                                                color: Colors.blue,
-                                                                width: 0.1,
+                                          height: 150, // Set a fixed height or adjust as needed
+                                          child: ListView.builder(
+                                            itemCount: filteredNames.length,
+                                            itemBuilder: (context, index) {
+                                              return FutureBuilder<DocumentSnapshot?>(
+                                                future: fetchData(filteredNames[index]),
+                                                builder: (context, snapshot) {
+                                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                                    return CircularProgressIndicator(); // or a loading indicator
+                                                  } else if (snapshot.hasError) {
+                                                    return Text('Error: ${snapshot.error}');
+                                                  } else if (!snapshot.hasData || snapshot.data == null) {
+                                                    return Text('No user found with the specified first name.');
+                                                  } else {
+                                                    DocumentSnapshot userDocument = snapshot.data!;
+                                                    FirebaseAuth auth = FirebaseAuth.instance;
+                                                    User? user = auth.currentUser;
+                                                    if (userDocument.id == user?.uid) return Container();
+                                                    return Container(
+                                                      height: 40,
+                                                      child: GestureDetector(
+                                                        onTap: () {
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (context) => ShowUserDetailsPage(
+                                                                userId: userDocument.id,
                                                               ),
                                                             ),
-                                                            child: ClipOval(
-                                                              child: Image.network(
-                                                                userDocument['profileImageUrl'],
-                                                                width: 30,
-                                                                height: 30,
-                                                                fit: BoxFit.cover,
+                                                          );
+                                                        },
+                                                        child: Row(
+                                                          children: [
+                                                            Container(
+                                                              width: 30,
+                                                              height: 30,
+                                                              decoration: BoxDecoration(
+                                                                shape: BoxShape.circle,
+                                                                border: Border.all(
+                                                                  color: Colors.blue,
+                                                                  width: 0.1,
+                                                                ),
+                                                              ),
+                                                              child: ClipOval(
+                                                                child: Image.network(
+                                                                  userDocument['profileImageUrl'],
+                                                                  width: 30,
+                                                                  height: 30,
+                                                                  fit: BoxFit.cover,
+                                                                ),
                                                               ),
                                                             ),
-                                                          ),
-                                                          Text(
-                                                            userDocument['firstName'],
-                                                            style: const TextStyle(fontSize: 20),
-                                                          ),
-                                                        ],
+                                                            Text(
+                                                              userDocument['firstName'],
+                                                              style: const TextStyle(fontSize: 20),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                            );
-                                          },
-                                        )
-
-
-                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              );
+                                            },
+                                          )),
                                     SizedBox(
                                       width: 400,
                                       child: Container(
@@ -274,7 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 style: TextStyle(color: Colors.white, fontSize: 36),
                                               ))),
                                     ),
-
                                     const SizedBox(
                                       height: 20,
                                     ),
@@ -292,12 +312,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(
                                       height: 20,
                                     ),
-
                                   ],
                                 ),
                               ),
                             ),
-
                           ]),
                         ],
                       ),
@@ -397,17 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
             String message = "user details not found";
             showAlert(context, message);
           }
-          await addImageUrlToFirebase(
-              user.uid,
-              imageUrl,
-              title!,
-              likes,
-              commentsCount,
-              dateTime,
-              likedBy,
-              profileImageUrl,
-              firstName,
-              status);
+          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status);
           setState(() {});
         } else {
           print('Error: User is not authenticated.');
@@ -478,9 +486,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void fetchUsers() async {
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .get();
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').get();
 
     for (QueryDocumentSnapshot document in querySnapshot.docs) {
       // Access the firstName field from each document and add it to the list
@@ -490,12 +496,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
+
   Future<DocumentSnapshot?> fetchData(String firstName) async {
     DocumentSnapshot? userDocument = await getDocumentByFirstName(firstName);
 
     if (userDocument != null) {
       // Document found, print the data
-      print('User document: ${userDocument.data()}');
+      print('User found');
     } else {
       print('No user found with the specified first name.');
     }
@@ -506,11 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<DocumentSnapshot?> getDocumentByFirstName(String firstName) async {
     try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('firstName', isEqualTo: firstName)
-          .limit(1)
-          .get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').where('firstName', isEqualTo: firstName).limit(1).get();
 
       if (querySnapshot.docs.isNotEmpty) {
         // If a document is found, return the first one
@@ -524,5 +527,4 @@ class _HomeScreenState extends State<HomeScreen> {
       return null;
     }
   }
-
 }

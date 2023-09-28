@@ -38,7 +38,6 @@ class _AllInteractionsState extends State<AllInteractions> {
             itemBuilder: (context, index) {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               print(data['message']);
-
               return Container(
                 child: Column(
                   children: [

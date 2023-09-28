@@ -12,7 +12,6 @@ import '../base_page.dart';
 
 class ShowUserDetailsPage extends StatefulWidget {
   final String? email;
-
   final String? userId;
   const ShowUserDetailsPage({super.key, this.email, this.userId});
 
@@ -35,7 +34,23 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   late String imageUrl;
   late String loadImageUrl = '';
 
+  FirebaseAuth auth = FirebaseAuth.instance;
+
+  bool friendStatus = false;
+  bool requestStatus = false;
+  late String requestId;
+  late String requestedTo;
+  late String requestedBy;
+
   bool editable = false;
+
+  @override
+  void initState() {
+    loadFriendsStatus();
+    loadUserDetails();
+    print('hi');
+    super.initState();
+  }
 
   void savedata() async {
     String uuid = AppStyles.uuid();
@@ -86,14 +101,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     return downloadUrl;
   }
 
-  @override
-  void initState() {
-    super.initState();
-
-    loadUserDetails();
-    setState(() {});
-  }
-
   Future<void> selectImage() async {
     Uint8List img = await pickImage(ImageSource.gallery);
     setState(() {
@@ -103,29 +110,24 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
   void loadUserDetails() async {
     print("loading user detials");
-
     print(widget.userId);
-    // Query the collection to find documents that match the provided mobile number
     if (widget.email != null) {
       editable = true;
       CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
       QuerySnapshot querySnapshot = await usersCollection.where('email', isEqualTo: widget.email).get();
       if (querySnapshot.docs.isNotEmpty) {
-        print("hi");
-        DocumentSnapshot userDocument = querySnapshot.docs.first;
-        // Map<String, dynamic> data = querySnapshot.data() as Map<String, dynamic>;
-        // print(data);
+        print("hii");
 
+        DocumentSnapshot userDocument = querySnapshot.docs.first;
         setState(() {
-          print("inside set state of loaduserdetails ");
+          print("inside set state of loaduserdetails email ");
           _firstNameController.text = userDocument['firstName'] ?? '';
           _lastNameController.text = userDocument['lastName'] ?? '';
           _emailController.text = userDocument['email'] ?? '';
           _locationController.text = userDocument['location'] ?? '';
           _ageController.text = userDocument['age'] ?? '';
           _genderController.text = userDocument['gender'] ?? '';
-          loadImageUrl = userDocument['profileImageUrl'];
-          // loadImage(loadImageUrl);
+          loadImageUrl = userDocument['profileImageUrl'] ?? '';
         });
       } else {
         String message = "user details not found";
@@ -145,8 +147,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
           _locationController.text = userDocument['location'] ?? '';
           _ageController.text = userDocument['age'] ?? '';
           _genderController.text = userDocument['gender'] ?? '';
-          loadImageUrl = userDocument['profileImageUrl'];
-          // loadImage(loadImageUrl);
+          loadImageUrl = userDocument['profileImageUrl'] ?? '';
         });
       } else {
         String message = "user details not found";
@@ -365,6 +366,32 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                         ),
                       ),
                     ),
+                    Visibility(
+                      visible: !editable,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Visibility(
+                              visible: !requestStatus,
+                              child: ElevatedButton(
+                                  onPressed: () {
+                                    sendFriendrequest();
+                                  },
+                                  child: Text("Send Friend Request"))),
+                          Visibility(
+                              visible: requestStatus && !friendStatus,
+                              child: Row(children: [
+                                const Text("Request Sent "),
+                                ElevatedButton(
+                                    onPressed: () {
+                                      cancelRequest;
+                                    },
+                                    child: Text("Cancel request"))
+                              ])),
+                          Visibility(visible: friendStatus, child: ElevatedButton(onPressed: () {}, child: Text("Remove Friend"))),
+                        ],
+                      ),
+                    )
                   ],
                 ),
               ),
@@ -373,5 +400,70 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
         ),
       ),
     );
+  }
+
+  sendFriendrequest() {
+    User? user = auth.currentUser;
+    requestedBy = user!.uid;
+    requestedTo = widget.userId!;
+    friendStatus = false;
+    requestStatus = true;
+    requestId = createRequestId(requestedBy, requestedTo);
+    CollectionReference friendRequests = FirebaseFirestore.instance.collection('friendRequests');
+
+    friendRequests.add({
+      'friendStatus': friendStatus,
+      'requestStatus': requestStatus,
+      'requestId': requestId,
+      'requestedBy': requestedBy,
+      'requestedTo': requestedTo,
+    });
+    setState(() {
+      friendStatus = false;
+      requestStatus = true;
+    });
+  }
+
+        cancelRequest() async {
+    User? user = auth.currentUser;
+    requestedBy = user!.uid;
+    requestedTo = widget.userId!;
+    friendStatus = false;
+    requestStatus = false;
+    requestId = createRequestId(requestedBy, requestedTo);
+    CollectionReference friendRequests = FirebaseFirestore.instance.collection('friendRequests');
+
+    QuerySnapshot querySnapshot = await friendRequests.where('requestId', isEqualTo: requestId).get();
+    for (QueryDocumentSnapshot document in querySnapshot.docs) {
+      await friendRequests.doc(document.id).delete();
+      print('Document deleted: ${document.id}');
+      setState(() {});
+    }
+  }
+
+  String createRequestId(String requestedBy, String requestedTo) {
+    return combineIds(requestedBy, requestedTo);
+  }
+
+  Future<void> loadFriendsStatus() async {
+    print('inside LFR');
+    User? user = auth.currentUser;
+    requestedBy = user!.uid;
+    requestedTo = widget.userId!;
+    requestId = createRequestId(requestedBy, requestedTo);
+    CollectionReference friendRequests = FirebaseFirestore.instance.collection('friendRequests');
+
+    QuerySnapshot querySnapshot = await friendRequests.where('requestId', isEqualTo: requestId).where('requestedBy', isEqualTo: requestedBy).get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      print('querySnapshot is not empty');
+
+      querySnapshot.docs.forEach((doc) {
+        // friendStatus=doc['friendStatus'];
+        requestStatus = doc['requestStatus'];
+      });
+    } else {
+      print('No friend request found with requestId: $requestId');
+    }
   }
 }
