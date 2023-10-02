@@ -35,6 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late bool showOnlyCurrentUserPosts = false;
   late bool status = false;
 
+  List<String> friendsIds=[];
+
   List<String> allNames = [];
   List<String> filteredNames = [];
   late String currentUserId;
@@ -58,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     fetchUsers();
+    fetchFriends();
     User? user = FirebaseAuth.instance.currentUser;
     currentUserId = user!.uid;
     super.initState();
@@ -145,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                     if (filteredNames.isNotEmpty)
-                                      Container(
+                                      SizedBox(
                                           height: 150, // Set a fixed height or adjust as needed
                                           child: ListView.builder(
                                             itemCount: filteredNames.length,
@@ -325,16 +328,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Column(children: [
                     Center(
-                      child: Container(color: Colors.white, child: StatusCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)),
+                      child: Container(color: Colors.white, child: StatusCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts,onUploadStatus: uploadAStatus,friendsIds:friendsIds)),
                     ),
                     Center(
                       child: Container(color: Colors.white, child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)),
                     ),
                   ]),
-                  // Align(
-                  //   alignment: Alignment.topLeft,
-                  //     child: IconButton(onPressed: (){}, icon: Icon(Icons.send))
-                  // ),
                 ],
               ),
             ),
@@ -528,5 +527,16 @@ class _HomeScreenState extends State<HomeScreen> {
       print('Error retrieving document by first name: $e');
       return null;
     }
+  }
+
+  Future<void> fetchFriends() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    List<String> friendsId = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['friends']?.cast<String>() ?? [];    if (friendsId != null) {
+      friendsIds = List.from(friendsId)..add(currentUserId!);
+    } else {
+      friendsIds = [currentUserId!];
+    }
+    print(friendsIds);
   }
 }

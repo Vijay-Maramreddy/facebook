@@ -7,11 +7,17 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:video_player/video_player.dart';
 
 import '../app_style.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import 'all_interactions.dart';
+import 'package:location/location.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:html';
+// import 'dart:io';
+
 
 class ChatWidget extends StatefulWidget {
   final Map<String, dynamic>? documentData;
@@ -26,9 +32,9 @@ class ChatWidget extends StatefulWidget {
 class _ChatWidgetState extends State<ChatWidget> {
   TextEditingController _messageController = TextEditingController();
   Uint8List? image;
+  XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-
-  
+  VideoPlayerController? _videoPlayerController;
 
   @override
   Widget build(BuildContext context) {
@@ -60,9 +66,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ShowUserDetailsPage(
-                          userId: widget.documentId,
-                        ),
+                        builder: (context) =>
+                            ShowUserDetailsPage(
+                              userId: widget.documentId,
+                            ),
                       ),
                     );
                   },
@@ -104,7 +111,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                   child: Container(
                     height: 500,
                     child: Center(
-                      child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId,groupId:widget.groupId),
+                      child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId, groupId: widget.groupId),
                     ),
                   ),
                 ),
@@ -133,6 +140,12 @@ class _ChatWidgetState extends State<ChatWidget> {
                           onPressed: uploadImageAndSaveUrl,
                           icon: Icon(Icons.add_a_photo),
                         ),
+                        IconButton(onPressed: () async {
+                          print("Button is pressed");
+                          await uploadVideoAndSaveUrl();
+                        },
+                          icon: Icon(Icons.video_library),
+                        )
                       ],
                     ),
                   ),
@@ -146,7 +159,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
                         String? imageUrl = '';
                         String text = _messageController.text;
-                        String groupId=combineIds(CurrentuserId,widget.documentId);
+                        String groupId = combineIds(CurrentuserId, widget.documentId);
                         if (text.isNotEmpty) {
                           await interactionsCollection.add({
                             'interactedBy': CurrentuserId,
@@ -154,13 +167,20 @@ class _ChatWidgetState extends State<ChatWidget> {
                             'imageUrl': imageUrl,
                             'dateTime': formattedDateTime,
                             'message': text,
-                            'groupId':groupId,
+                            'groupId': groupId,
                           });
                           _messageController.clear();
                           // setState(() {}); // Clear the text field after sending the message
                         }
                       },
                       icon: Icon(Icons.send)),
+                  IconButton(
+                    onPressed: () async {
+                      print("button is pressed");
+                      await sendMessageWithLocation();
+                    },
+                    icon: Icon(Icons.map),
+                  ),
                 ])
               ]),
             ),
@@ -178,7 +198,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     return downloadUrl;
   }
 
-
   void uploadImageAndSaveUrl() async {
     image = await pickImageFromGallery();
 
@@ -191,7 +210,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
       String? CurrentuserId = user?.uid;
-      String groupId=combineIds(CurrentuserId,widget.documentId);
+      String groupId = combineIds(CurrentuserId, widget.documentId);
       if (imageUrl != null) {
         await interactionsCollection.add({
           'interactedBy': CurrentuserId,
@@ -199,7 +218,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           'imageUrl': imageUrl,
           'dateTime': dateTime,
           'message': message,
-          'groupId':groupId,
+          'groupId': groupId,
         });
       }
     } else {
@@ -257,4 +276,158 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
 
-}
+  Future<void> sendMessageWithLocation() async {
+    String? locationMessage = await _getUserLocation();
+    print("$locationMessage");
+
+    if (locationMessage != null) {
+      // Send the location message to Firebase
+      await sendMessage(locationMessage);
+    } else {
+      print('Unable to retrieve location.');
+    }
+  }
+
+  Future<String?> _getUserLocation() async {
+    try {
+      final Geoposition geoposition = await window.navigator.geolocation.getCurrentPosition();
+      final Coordinates? coords = geoposition.coords;
+      num? latitude = coords?.latitude!;
+      num? longitude = coords?.longitude!;
+      return 'https://www.google.com/maps/place/$latitude,$longitude';
+    } catch (e) {
+      print('Error getting location: $e');
+      return null;
+    }
+  }
+
+  Future<void> sendMessage(String message) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String groupId = combineIds(currentUserId, widget.documentId);
+    await interactionsCollection.add({
+      'interactedBy': currentUserId,
+      'interactedWith': widget.documentId,
+      'imageUrl': '',
+      'dateTime': formattedDateTime,
+      'message': message,
+      'groupId': groupId,
+    });
+    // Clear the text field after sending the message
+    _messageController.clear();
+  }
+
+  Future<String?> _showVideoPickerDialog() async {
+    if (video != null) {
+      print("inside video dialog box");
+      var message = '';
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Send a Video'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Display a thumbnail or preview of the video if available
+                // You can use a VideoPlayer widget for this
+                SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: VideoPlayer(video! as VideoPlayerController),
+                ),
+                TextField(
+                  onChanged: (value) {
+                    message = value;
+                  },
+                  decoration: const InputDecoration(labelText: 'Type a message'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context, message);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+      return message;
+    } else {
+      return '';
+    }
+  }
+
+  Future<XFile?> pickVideoFromGallery() async {
+    XFile? videoFile = await ImagePicker().pickVideo(source: ImageSource.gallery);
+    print(videoFile);
+    return videoFile;
+  }
+
+  Future<void> uploadVideoAndSaveUrl() async {
+    video = await pickVideoFromGallery();
+
+    if (video != null) {
+      String? message = await _showVideoPickerDialog();
+      String uuid = AppStyles.uuid();
+      DateTime now = DateTime.now();
+      String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+      String? videoUrl = await uploadVideoToStorage('videos/' + uuid, video!);
+
+      final CollectionReference interactionsCollection =
+      FirebaseFirestore.instance.collection('interactions');
+      User? user = FirebaseAuth.instance.currentUser;
+      String? currentUserId = user?.uid;
+      String groupId = combineIds(currentUserId, widget.documentId);
+      if (videoUrl != null) {
+        await interactionsCollection.add({
+          'interactedBy': currentUserId,
+          'interactedWith': widget.documentId,
+          'videoUrl': videoUrl,
+          'imageUrl': '',
+          'dateTime': dateTime,
+          'message': message,
+          'groupId': groupId,
+        });
+      }
+    } else {
+      print('No video picked.');
+    }
+  }
+
+
+  Future<String?> uploadVideoToStorage(String childName, XFile videoFile) async {
+    String uuid = AppStyles.uuid();
+    // String videoFileName = '$childName/$uuid.mp4';
+    //
+    // // Create a File object using dart:io's File class
+    // File file = File(videoFile.path!);
+    //
+    // Reference ref = _storage.ref().child(videoFileName);
+    // UploadTask uploadTask = ref.putFile(file);
+    // TaskSnapshot snapshot = await uploadTask;
+    // String downloadUrl = await snapshot.ref.getDownloadURL();
+    final bytes = await videoFile.readAsBytes();
+    FirebaseStorage storage = FirebaseStorage.instance;
+    // var videoFileName = const Uuid().v4();
+    Reference child = storage.ref("messagevideos").child(uuid);
+
+    await child.putData(bytes);
+    // TaskSnapshot snapshot = await uploadTask;
+    String downloadUrl = await child.getDownloadURL();
+
+    return downloadUrl;
+  }}

@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:html';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
+
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AllInteractions extends StatefulWidget {
   late String? interactedBy;
@@ -21,7 +25,7 @@ class _AllInteractionsState extends State<AllInteractions> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('interactions')
-          .where('groupId', isEqualTo:widget.groupId ) // Adjust this condition as needed
+          .where('groupId', isEqualTo: widget.groupId) // Adjust this condition as needed
           .orderBy('dateTime')
           .snapshots(),
       builder: (context, snapshot) {
@@ -34,95 +38,142 @@ class _AllInteractionsState extends State<AllInteractions> {
         } else {
           // Data is available, build your UI accordingly
           return ListView.builder(
+            // reverse: true,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               print(data['message']);
+              final messageText = data['message'];
               return Container(
                 child: Column(
                   children: [
                     if (data['interactedBy'] == widget.interactedBy)
-                      if(data['imageUrl']=="")
-                          Column(
-                             children:[
-                               Container(
-                                alignment: Alignment.centerRight,
-                                padding: EdgeInsets.fromLTRB(16, 16, 16,0),
-                                child: Text(data['message']),
+                      if (data['imageUrl'] == "")
+                        if (data['message']!.startsWith('https://'))
+                          Column(children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  window.open(data['message']!, '_blank');
+                                },
+                                child: Container(
+                                  alignment: Alignment.centerRight,
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  child: Text(
+                                    data['message'],
+                                    style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                  ),
+                                ),
                               ),
-                               Container(
-                                 alignment: Alignment.centerRight,
-                                 padding: EdgeInsets.fromLTRB(16, 0, 16,16),
-                                 child: Text(data['dateTime']),
-                               ),
-                            ]
-                          )
-                      else
-                        Column(
-                          children: [
-                              Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16,0),
-                                  child: Image.network(
-                                        data['imageUrl'],
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                        ),
-                                  ),
-                              Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: EdgeInsets.fromLTRB(16,0,16, 0),
-                                  child: Text(data['message']),
-                                  ),
+                            ),
                             Container(
                               alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16,0,16, 16),
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                               child: Text(data['dateTime']),
-                            )
-                          ],
-                        )
-                    else
-                      if(data['imageUrl']=="")
-                        Column(
-                          children: [
+                            ),
+                          ])
+                        else
+                          Column(children: [
                             Container(
-                              alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.fromLTRB(16, 16, 16,0),
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                               child: Text(data['message']),
                             ),
                             Container(
-                              alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16,16),
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                               child: Text(data['dateTime']),
                             ),
-                          ],
-                        )
+                          ])
                       else
                         Column(
                           children: [
                             Container(
-                              alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.fromLTRB(16, 16, 16,0),
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                               child: Image.network(
                                 data['imageUrl'],
-                                width: 30,
-                                height: 30,
+                                width: 100,
+                                height: 100,
                                 fit: BoxFit.cover,
                               ),
                             ),
                             Container(
-                              alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16,0),
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
                               child: Text(data['message']),
                             ),
                             Container(
-                              alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16,16),
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                               child: Text(data['dateTime']),
                             )
                           ],
                         )
+                    else if (data['imageUrl'] == "")
+                      if (data['message']!.startsWith('https://'))
+                        Column(children: [
+                          MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () {
+                                window.open(data['message']!, '_blank');
+                              },
+                              child: Container(
+                                alignment: Alignment.centerLeft,
+                                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                child: Text(
+                                  data['message'],
+                                  style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Text(data['dateTime']),
+                          ),
+                        ])
+                      else
+                        Column(children: [
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: Text(data['message']),
+                          ),
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Text(data['dateTime']),
+                          ),
+                        ])
+                    else
+                      Column(
+                        children: [
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: Image.network(
+                              data['imageUrl'],
+                              width: 30,
+                              height: 30,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                            child: Text(data['message']),
+                          ),
+                          Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Text(data['dateTime']),
+                          )
+                        ],
+                      )
                   ],
                 ),
               );
@@ -167,29 +218,4 @@ class _AllInteractionsState extends State<AllInteractions> {
 
     return controller.stream;
   }
-
-// Stream<QuerySnapshot> mergeQueryResults() {
-  //   Stream<QuerySnapshot> stream1 = FirebaseFirestore.instance
-  //       .collection('interactions')
-  //       .where('interactedWith', isEqualTo: widget.interactedWith)
-  //       .where('interactedBy', isEqualTo: widget.interactedBy)
-  //       .snapshots();
-  //
-  //   Stream<QuerySnapshot> stream2 = FirebaseFirestore.instance
-  //       .collection('interactions')
-  //       .where('interactedBy', isEqualTo: widget.interactedWith)
-  //       .where('interactedWith', isEqualTo: widget.interactedBy)
-  //       .snapshots();
-  //
-  //   // Add listeners to print the lengths of the streams
-  //   stream1.listen((querySnapshot) {
-  //     print('Stream 1 length: ${querySnapshot.docs.length}');
-  //   });
-  //
-  //   stream2.listen((querySnapshot) {
-  //     print('Stream 2 length: ${querySnapshot.docs.length}');
-  //   });
-  //
-  //   return Rx.merge([stream1, stream2]);
-  // }
 }

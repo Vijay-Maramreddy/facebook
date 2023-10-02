@@ -7,10 +7,14 @@ import 'package:intl/intl.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import 'image_document_model.dart';
+import 'package:facebook/home/home_page.dart';
 
 class StatusCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
-  StatusCollectionWidget({super.key, required this.showOnlyCurrentUserPosts});
+  final List<String> friendsIds;
+  final VoidCallback? onUploadStatus;
+
+  StatusCollectionWidget({super.key, required this.showOnlyCurrentUserPosts, required this.friendsIds, this.onUploadStatus});
 
   @override
   _StatusCollectionWidgetState createState() => _StatusCollectionWidgetState();
@@ -19,11 +23,29 @@ class StatusCollectionWidget extends StatefulWidget {
 class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   late String profileImageUrl = '';
   late String firstName = '';
+  late final List<String> friendsIds;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    friendsIds=widget.friendsIds;
+    super.initState();
+    print(friendsIds);
+  }
 
   @override
   Widget build(BuildContext context) {
-    Stream streams = FirebaseFirestore.instance.collection('images').where('status', isEqualTo: true).snapshots();
-    return SingleChildScrollView(
+    // return SingleChildScrollView(
+    //   child: StreamBuilder<QuerySnapshot>(
+    //       stream: widget.friendsIds != null && widget.friendsIds!.isNotEmpty
+    //           ? FirebaseFirestore.instance
+    //           .collection('images')
+    //           .where('status', isEqualTo: true)
+    //           .where('userId', whereIn: widget.friendsIds)
+    //           .orderBy('dateTime', descending: true)
+    //           .snapshots()
+    //           : null,
+          return SingleChildScrollView(
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('images')
@@ -42,10 +64,13 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
               padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
               width: 800,
               height: 200,
-              child: const Column(
+              child: Column(
                   children:[
                     Text("no status available now, try creating your own Status"),
-                    // IconButton(onPressed: (){uploadAStatus();}, icon: Icon(Icons.add_a_photo))
+                    IconButton(
+                        onPressed: (){
+                          onPressedUploadStatus();
+                      }, icon: Icon(Icons.add_a_photo))
                   ],
               ),
             );
@@ -310,6 +335,13 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     );
   }
 
+  void onPressedUploadStatus() {
+    if (widget.onUploadStatus != null) {
+      widget.onUploadStatus!();
+    }
+  }
+
+
   bool isVisible(String userId) {
     if (widget.showOnlyCurrentUserPosts == true) {
       User? user = FirebaseAuth.instance.currentUser;
@@ -318,7 +350,21 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
         return false;
       }
     }
-    return true;
+    if(friendsIds.isEmpty){
+      return true;
+    }
+    if(friendsIds.contains(userId))
+      {
+        return true;
+      }
+    else
+      {
+        print(friendsIds);
+        print(userId);
+        print("its false");
+        return false;
+      }
+     return true;
   }
 
   isCountVisible(String userId) {
@@ -406,3 +452,4 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     }
   }
 }
+
