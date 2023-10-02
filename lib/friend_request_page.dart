@@ -122,7 +122,7 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                               ),
                             ),
                             ElevatedButton(onPressed: (){acceptRequest(requesterInfo.id);}, child: Text("Accept")),
-                            ElevatedButton(onPressed: () {}, child: Text("Reject")),
+                            ElevatedButton(onPressed: () {rejectRequest(requesterInfo.id);}, child: Text("Reject")),
                           ],
                         ),
                       );
@@ -214,5 +214,42 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
 
   String createRequestId(String requestedBy, String requestedTo) {
     return combineIds(requestedBy, requestedTo);
+  }
+
+  void rejectRequest(String id) {
+    {
+      User? user = auth.currentUser;
+      var requestedTo = user!.uid;
+      var requestedBy = id;
+      var requestId = createRequestId(requestedBy, requestedTo);
+      CollectionReference friendRequests =
+      FirebaseFirestore.instance.collection('friendRequests');
+
+      friendRequests
+          .where('requestId', isEqualTo: requestId)
+          .get()
+          .then((QuerySnapshot querySnapshot) {
+
+
+        querySnapshot.docs.forEach((QueryDocumentSnapshot document)
+        {
+          friendRequests.doc(document.id).delete().then((_) {
+
+
+            print('Rejected request and deleted request: ${document.id}');
+
+          }
+
+          ).catchError((e) {
+            print('Error deleting friend request: $e');
+          });
+        }
+
+        );
+      }
+      ).catchError((e) {
+        print('Error getting friend request documents: $e');
+      });
+    }
   }
 }

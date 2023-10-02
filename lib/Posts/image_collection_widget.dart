@@ -55,27 +55,46 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
               itemBuilder: (context, index) {
                 final document = snapshot.data!.docs[index];
                 String documentId = snapshot.data!.docs[index].id;
-                DateTime now = DateTime.now();
-                var commentDateTime = DateTime.parse(document['dateTime'] as String);
-                var difference = now.difference(commentDateTime);
-                String formattedTime = _formatTimeDifference(difference);
+                String postUserId = document['userId'];
 
-                return buildImageCard(
-                  ImageDocument(
-                    imageUrl: document['imageUrl'],
-                    title: document['title'],
-                    userId: document['userId'],
-                    likes: document['likes'],
-                    likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
-                    firstName: document['firstName'],
-                    profileImageUrl: document['profileImageUrl'],
-                    commentsCount: document['commentsCount'],
-                    dateTime: formattedTime,
-                    status: document['status'],
-                  ),
-                  documentsId: documentId,
+                return FutureBuilder<UserProfileDetails>(
+                  future: getProfileDetails(postUserId),
+                  builder: (context, profileDetailsSnapshot) {
+                    if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    } else if (profileDetailsSnapshot.hasError) {
+                      return Text('Error: ${profileDetailsSnapshot.error}');
+                    } else {
+                      DateTime now = DateTime.now();
+                      var commentDateTime = DateTime.parse(document['dateTime'] as String);
+                      var difference = now.difference(commentDateTime);
+                      String formattedTime = _formatTimeDifference(difference);
+                      UserProfileDetails? userDetails = profileDetailsSnapshot.data;
+                      String? profileImageUrl = userDetails?.profileImageUrl;
+                      String? firstName = userDetails?.firstName;
+                      return buildImageCard(
+                        ImageDocument(
+                          imageUrl: document['imageUrl'],
+                          title: document['title'],
+                          userId: document['userId'],
+                          likes: document['likes'],
+                          likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
+                          // firstName: document['firstName'],
+                          // profileImageUrl: document['profileImageUrl'],
+                          commentsCount: document['commentsCount'],
+                          dateTime: formattedTime,
+                          status: document['status'],
+                        ),
+                        documentsId: documentId,
+                        postProfileImageUrl: profileImageUrl,
+                        postFirstName:firstName,
+                      );
+                    }
+                  },
                 );
               },
+
+
             ),
           );
         },
@@ -83,7 +102,9 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     );
   }
 
-  Widget buildImageCard(ImageDocument document, {required String documentsId}) {
+
+
+  Widget buildImageCard(ImageDocument document, {required String documentsId, String? postProfileImageUrl, String? postFirstName}) {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     late bool alreadyLiked = (document.likedBy.contains(currentUserId));
@@ -129,7 +150,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         ),
                         child: ClipOval(
                           child: Image.network(
-                            document.profileImageUrl,
+                            postProfileImageUrl!,
                             width: 30, // Increased width
                             height: 30, // Increased height
                             fit: BoxFit.cover,
@@ -137,7 +158,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         ),
                       ),
                       Text(
-                        document.firstName,
+                        postFirstName!,
                         style: const TextStyle(fontSize: 20),
                       ),
                       const SizedBox(width: 8.0),
@@ -305,23 +326,23 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     });
   }
 
-  fetchUserDetails({required String userId}) async {
-    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-    // Query the collection to find documents that match the provided mobile number
-    DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
-    if (documentSnapshot.exists) {
-      Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
-      if (data != null) {
-        profileImageUrl = data['profileImageUrl'];
-        firstName = data['firstName'];
-      } else {
-        print('Document data is null.');
-      }
-    } else {
-      String message = "user details not found";
-      showAlert(context, message);
-    }
-  }
+  // fetchUserDetails({required String userId}) async {
+  //   CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+  //   // Query the collection to find documents that match the provided mobile number
+  //   DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
+  //   if (documentSnapshot.exists) {
+  //     Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
+  //     if (data != null) {
+  //       profileImageUrl = data['profileImageUrl'];
+  //       firstName = data['firstName'];
+  //     } else {
+  //       print('Document data is null.');
+  //     }
+  //   } else {
+  //     String message = "user details not found";
+  //     showAlert(context, message);
+  //   }
+  // }
 
   String _formatTimeDifference(Duration difference) {
     if (difference.inMinutes < 60) {
@@ -333,3 +354,5 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     }
   }
 }
+
+

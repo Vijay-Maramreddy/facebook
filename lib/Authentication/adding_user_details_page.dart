@@ -25,6 +25,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  List<String> friends=[];
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -51,6 +52,8 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         'mobileNumber': widget.mobileNumber,
         'email':_emailController.text,
         'password':_passwordController.text,
+
+        'friends':friends,
       });
 
       // Navigate to the home page or another screen

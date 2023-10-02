@@ -1,4 +1,5 @@
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -125,4 +126,29 @@ List<String> sortStrings(String str1, String str2) {
   stringsList.sort(); // Sort the list lexicographically
 
   return stringsList;
+}
+
+class UserProfileDetails {
+  final String? profileImageUrl;
+  final String? firstName;
+
+  UserProfileDetails({this.profileImageUrl, this.firstName});
+}
+
+Future<UserProfileDetails> getProfileDetails(String userId) async {
+  try {
+    DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    Map<String, dynamic>? data = snapshot.data() as Map<String, dynamic>?;
+
+    if (data != null) {
+      String? profileImageUrl = data['profileImageUrl'] as String?;
+      String? firstName = data['firstName'] as String?;
+      return UserProfileDetails(profileImageUrl: profileImageUrl, firstName: firstName);
+    } else {
+      return UserProfileDetails(profileImageUrl: null, firstName: null);
+    }
+  } catch (e) {
+    print('Error getting profile details: $e');
+    return UserProfileDetails(profileImageUrl: null, firstName: null);
+  }
 }

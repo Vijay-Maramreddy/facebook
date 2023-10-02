@@ -22,7 +22,7 @@ class _AllInteractionsState extends State<AllInteractions> {
       stream: FirebaseFirestore.instance
           .collection('interactions')
           .where('groupId', isEqualTo:widget.groupId ) // Adjust this condition as needed
-          .orderBy('dateTime', descending: false)
+          .orderBy('dateTime')
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -43,10 +43,19 @@ class _AllInteractionsState extends State<AllInteractions> {
                   children: [
                     if (data['interactedBy'] == widget.interactedBy)
                       if(data['imageUrl']=="")
-                          Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.all(16.0),
-                            child: Text(data['message']),
+                          Column(
+                             children:[
+                               Container(
+                                alignment: Alignment.centerRight,
+                                padding: EdgeInsets.fromLTRB(16, 16, 16,0),
+                                child: Text(data['message']),
+                              ),
+                               Container(
+                                 alignment: Alignment.centerRight,
+                                 padding: EdgeInsets.fromLTRB(16, 0, 16,16),
+                                 child: Text(data['dateTime']),
+                               ),
+                            ]
                           )
                       else
                         Column(
@@ -63,24 +72,38 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   ),
                               Container(
                                   alignment: Alignment.centerRight,
-                                  padding: EdgeInsets.fromLTRB(16,0,16, 16),
+                                  padding: EdgeInsets.fromLTRB(16,0,16, 0),
                                   child: Text(data['message']),
-                                  )
+                                  ),
+                            Container(
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16,0,16, 16),
+                              child: Text(data['dateTime']),
+                            )
                           ],
                         )
                     else
                       if(data['imageUrl']=="")
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(data['message']),
-                        )
-                      else
-                        Row(
+                        Column(
                           children: [
                             Container(
                               alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.all(16.0),
+                              padding: EdgeInsets.fromLTRB(16, 16, 16,0),
+                              child: Text(data['message']),
+                            ),
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16,16),
+                              child: Text(data['dateTime']),
+                            ),
+                          ],
+                        )
+                      else
+                        Column(
+                          children: [
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              padding: EdgeInsets.fromLTRB(16, 16, 16,0),
                               child: Image.network(
                                 data['imageUrl'],
                                 width: 30,
@@ -90,8 +113,13 @@ class _AllInteractionsState extends State<AllInteractions> {
                             ),
                             Container(
                               alignment: Alignment.centerLeft,
-                              padding: EdgeInsets.all(16.0),
+                              padding: EdgeInsets.fromLTRB(16, 0, 16,0),
                               child: Text(data['message']),
+                            ),
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16,16),
+                              child: Text(data['dateTime']),
                             )
                           ],
                         )

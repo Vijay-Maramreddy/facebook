@@ -17,6 +17,7 @@ class _ChatPageState extends State<ChatPage> {
   Map<String, dynamic>? selectedDocument;
   String? groupId;
   late Future<QuerySnapshot<Map<String, dynamic>>> querySnapshot;
+  // late List<String> friends=[];
 
   @override
   void initState() {
@@ -26,7 +27,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<QuerySnapshot<Map<String, dynamic>>> getUsers() async {
     try {
-      return await FirebaseFirestore.instance.collection('users').orderBy('dateTime', descending: true).get();
+      return await FirebaseFirestore.instance.collection('users').get();
     } catch (e) {
       print('Error retrieving users: $e');
       throw e; // Rethrow the error to propagate it further if needed
@@ -35,6 +36,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+
 
     return Scaffold(
       appBar: AppBar(
@@ -89,6 +91,7 @@ class _ChatPageState extends State<ChatPage> {
                                     return Text('Error: ${snapshot.error}');
                                   } else {
                                     final querySnapshot = snapshot.data;
+                                    print(querySnapshot!.docs.length);
                                     return ListView.builder(
                                       itemCount: querySnapshot!.docs.length,
                                       itemBuilder: (context, index) {
@@ -173,11 +176,13 @@ class _ChatPageState extends State<ChatPage> {
 
   currentUserIsFriend(String? selectedDocumentId) {
     User? user = FirebaseAuth.instance.currentUser;
-    String? CurrentuserId = user?.uid;
-    if(CurrentuserId==selectedDocumentId)
+    String? currentUserId = user?.uid;
+
+    if(currentUserId==selectedDocumentId)
       {
         return false;
       }
+
     return true;
   }
 

@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> allNames = [];
   List<String> filteredNames = [];
+  late String currentUserId;
 
   void onSearchTextChanged(String searchText) {
     filteredNames.clear();
@@ -57,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     fetchUsers();
-
+    User? user = FirebaseAuth.instance.currentUser;
+    currentUserId = user!.uid;
     super.initState();
     //
   }
@@ -79,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => ShowUserDetailsPage(
-                        email: widget.email,
+                        userId:currentUserId,
                       ),
                     ),
                   );
@@ -249,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   context,
                                                   MaterialPageRoute(
                                                     builder: (context) => ShowUserDetailsPage(
-                                                      email: widget.email,
+                                                      userId: currentUserId,
                                                     ),
                                                   ),
                                                 );

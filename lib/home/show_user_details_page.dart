@@ -1,3 +1,4 @@
+import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,9 +12,9 @@ import '../app_style.dart';
 import '../base_page.dart';
 
 class ShowUserDetailsPage extends StatefulWidget {
-  final String? email;
+  // final String? email;
   final String? userId;
-  const ShowUserDetailsPage({super.key, this.email, this.userId});
+  const ShowUserDetailsPage({super.key, this.userId});
 
   @override
   _ShowUserDetailsPageState createState() => _ShowUserDetailsPageState();
@@ -33,6 +34,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   late String errorMessage;
   late String imageUrl;
   late String loadImageUrl = '';
+  late String finalImage;
 
   FirebaseAuth auth = FirebaseAuth.instance;
 
@@ -43,18 +45,25 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   late String requestedBy;
 
   bool editable = false;
+  bool isUser=false;
 
   @override
   void initState() {
     loadFriendsStatus();
     loadUserDetails();
+    updateEditable();
     print('hi');
     super.initState();
   }
 
   void savedata() async {
-    String uuid = AppStyles.uuid();
-    imageUrl = await uploadImageToStorage('profileImage/' + uuid, _image!);
+    if (_image != null) {
+      String uuid = AppStyles.uuid();
+      imageUrl = await uploadImageToStorage('profileImage/' + uuid, _image!);
+    } else {
+      imageUrl = loadImageUrl;
+    }
+
     Map<String, dynamic> updatedData = {
       'firstName': _firstNameController.text,
       'lastName': _lastNameController.text,
@@ -62,34 +71,25 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       'location': _locationController.text,
       'gender': _genderController.text,
       'email': _emailController.text,
-      'profileImageUrl': imageUrl, // Add the image URL to user data
+      'profileImageUrl': imageUrl,
     };
+
     try {
-      CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      String? id = widget.userId;
+      DocumentReference documentReference = firestore.collection('users').doc(widget.userId);
 
-      // Query the collection to find documents that match the provided email
-      QuerySnapshot querySnapshot = await usersCollection.where('email', isEqualTo: widget.email).get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        print("while upadting profile image 2");
-        User? user = FirebaseAuth.instance.currentUser;
-        String? CurrentuserId = user?.uid;
-
-        print(widget.userId);
-        DocumentSnapshot userDocument = querySnapshot.docs.first;
-        await usersCollection.doc(CurrentuserId).update(updatedData);
+      if (!documentReference.isNull) {
+        await documentReference.update(updatedData);
         Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(email: _emailController.text)));
-      } else {
-        String message = "User details not found";
-        showAlert(context, message);
       }
     } catch (e) {
-      // Handle any errors that may occur during the update process.
       print("Error updating user details: $e");
       errorMessage = "An error occurred while updating user details";
       showAlert(context, errorMessage);
     }
   }
+
 
   Future<String> uploadImageToStorage(String childName, Uint8List file) async {
     print("inside upload image to storage");
@@ -111,49 +111,26 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   void loadUserDetails() async {
     print("loading user detials");
     print(widget.userId);
-    if (widget.email != null) {
-      editable = true;
-      CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-      QuerySnapshot querySnapshot = await usersCollection.where('email', isEqualTo: widget.email).get();
-      if (querySnapshot.docs.isNotEmpty) {
-        print("hii");
-
-        DocumentSnapshot userDocument = querySnapshot.docs.first;
-        setState(() {
-          print("inside set state of loaduserdetails email ");
-          _firstNameController.text = userDocument['firstName'] ?? '';
-          _lastNameController.text = userDocument['lastName'] ?? '';
-          _emailController.text = userDocument['email'] ?? '';
-          _locationController.text = userDocument['location'] ?? '';
-          _ageController.text = userDocument['age'] ?? '';
-          _genderController.text = userDocument['gender'] ?? '';
-          loadImageUrl = userDocument['profileImageUrl'] ?? '';
-        });
-      } else {
-        String message = "user details not found";
-        showAlert(context, message);
-      }
+    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+    print(widget.userId);
+    // Query the collection to find the document with the provided UID
+    var userDocument = await usersCollection.doc(widget.userId).get();
+    if (userDocument.exists) {
+      setState(() {
+        print("inside set state of loaduserdetails ");
+        _firstNameController.text = userDocument['firstName'] ?? '';
+        _lastNameController.text = userDocument['lastName'] ?? '';
+        _emailController.text = userDocument['email'] ?? '';
+        _locationController.text = userDocument['location'] ?? '';
+        _ageController.text = userDocument['age'] ?? '';
+        _genderController.text = userDocument['gender'] ?? '';
+        loadImageUrl = userDocument['profileImageUrl'] ?? '';
+      });
     } else {
-      CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-      print(widget.userId);
-      // Query the collection to find the document with the provided UID
-      var userDocument = await usersCollection.doc(widget.userId).get();
-      if (userDocument.exists) {
-        setState(() {
-          print("inside set state of loaduserdetails ");
-          _firstNameController.text = userDocument['firstName'] ?? '';
-          _lastNameController.text = userDocument['lastName'] ?? '';
-          _emailController.text = userDocument['email'] ?? '';
-          _locationController.text = userDocument['location'] ?? '';
-          _ageController.text = userDocument['age'] ?? '';
-          _genderController.text = userDocument['gender'] ?? '';
-          loadImageUrl = userDocument['profileImageUrl'] ?? '';
-        });
-      } else {
-        String message = "user details not found";
-        showAlert(context, message);
-      }
+      String message = "user details not found";
+      showAlert(context, message);
     }
+
   }
 
   @override
@@ -358,7 +335,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                             backgroundColor: Colors.yellow,
                             foregroundColor: Colors.black,
                           ),
-                          onPressed: savedata,
+                          onPressed: (){savedata();},
                           child: const Padding(
                             padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
                             child: Text('Save'),
@@ -372,7 +349,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Visibility(
-                              visible: !requestStatus,
+                              visible: !(requestStatus || friendStatus),
                               child: ElevatedButton(
                                   onPressed: () {
                                     sendFriendrequest();
@@ -384,11 +361,11 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                 const Text("Request Sent "),
                                 ElevatedButton(
                                     onPressed: () {
-                                      cancelRequest;
+                                      cancelRequest();
                                     },
                                     child: Text("Cancel request"))
                               ])),
-                          Visibility(visible: friendStatus, child: ElevatedButton(onPressed: () {}, child: Text("Remove Friend"))),
+                          Visibility(visible: friendStatus, child: ElevatedButton(onPressed: () { removeFriend();}, child: Text("Remove Friend"))),
                         ],
                       ),
                     )
@@ -424,7 +401,8 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     });
   }
 
-        cancelRequest() async {
+    cancelRequest() async {
+    print("inside cancel request");
     User? user = auth.currentUser;
     requestedBy = user!.uid;
     requestedTo = widget.userId!;
@@ -439,6 +417,53 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       print('Document deleted: ${document.id}');
       setState(() {});
     }
+  }
+  removeFriend() async{
+    print("inside cancel request");
+    User? user = auth.currentUser;
+    requestedBy = user!.uid;
+    requestedTo = widget.userId!;
+    friendStatus = false;
+    requestStatus = false;
+    DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(requestedTo);
+    userDoc.get().then((DocumentSnapshot userSnapshot) {
+      if (userSnapshot.exists) {
+        List<String> friendsList = [];
+
+        if (userSnapshot['friends'] is List) {
+          friendsList = List.from(userSnapshot['friends']);
+        }
+        friendsList.remove(requestedBy);
+
+        userDoc.set({'friends': friendsList}, SetOptions(merge: true));
+      } else {
+        userDoc.set({'Not friends': [requestedBy]});
+      }
+
+    }).catchError((e) {
+      print('Error getting user document: $e');
+    });
+    DocumentReference usersDoc = FirebaseFirestore.instance.collection('users').doc(requestedBy);
+    usersDoc.get().then((DocumentSnapshot userSnapshot) {
+      if (userSnapshot.exists) {
+        List<String> friendsList = [];
+
+        if (userSnapshot['friends'] is List) {
+          friendsList = List.from(userSnapshot['friends']);
+        }
+        friendsList.remove(requestedTo);
+
+        usersDoc.set({'friends': friendsList}, SetOptions(merge: true));
+      } else {
+        usersDoc.set({'Not friends': [requestedTo]});
+      }
+
+
+
+    }).catchError((e) {
+      print('Error getting user document: $e');
+    });
+
   }
 
   String createRequestId(String requestedBy, String requestedTo) {
@@ -459,11 +484,31 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       print('querySnapshot is not empty');
 
       querySnapshot.docs.forEach((doc) {
-        // friendStatus=doc['friendStatus'];
+        friendStatus=doc['friendStatus'];
         requestStatus = doc['requestStatus'];
       });
     } else {
       print('No friend request found with requestId: $requestId');
     }
+    DocumentSnapshot userDocument = await FirebaseFirestore.instance.collection('users').doc(requestedTo).get();
+    if (userDocument.exists) {
+      List<dynamic> friends = userDocument['friends'];
+
+      if (friends != null && friends.contains(requestedBy)) {
+        friendStatus=true;
+        // requestStatus=true;
+        print("friend status is $friendStatus");
+        // print("friend status is $requestStatus");
+      }
+    }
+  }
+
+  void updateEditable() {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    if(widget.userId==currentUserId)
+      {
+        editable=true;
+      }
   }
 }

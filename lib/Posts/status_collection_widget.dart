@@ -28,7 +28,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
         stream: FirebaseFirestore.instance
             .collection('images')
             .where('status', isEqualTo: true)
-            // .orderBy('status')
             .orderBy('dateTime', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -39,7 +38,17 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
             return Text('Error: ${snapshot.error}');
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Text('No data available');
+            return Container(
+              padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+              width: 800,
+              height: 200,
+              child: const Column(
+                  children:[
+                    Text("no status available now, try creating your own Status"),
+                    // IconButton(onPressed: (){uploadAStatus();}, icon: Icon(Icons.add_a_photo))
+                  ],
+              ),
+            );
           }
           return Container(
             padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
@@ -51,30 +60,47 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
               itemBuilder: (context, index) {
                 final document = snapshot.data!.docs[index];
                 String documentId = snapshot.data!.docs[index].id;
-                DateTime now = DateTime.now();
-                var commentDateTime = DateTime.parse(document['dateTime'] as String);
-                var difference = now.difference(commentDateTime);
-                if (difference.inHours >= 24) {
-                  deletePost(documentId);
-                  return null;
-                } else {
-                }
-                String formattedTime = _formatTimeDifference(difference);
+                String postUserId = document['userId'];
 
-                return buildImageCard(
-                  ImageDocument(
-                    imageUrl: document['imageUrl'],
-                    title: document['title'],
-                    userId: document['userId'],
-                    likes: document['likes'],
-                    likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
-                    firstName: document['firstName'],
-                    profileImageUrl: document['profileImageUrl'],
-                    commentsCount: document['commentsCount'],
-                    dateTime: formattedTime,
-                    status: document['status'],
-                  ),
-                  documentsId: documentId,
+                return FutureBuilder<UserProfileDetails>(
+                  future: getProfileDetails(postUserId),
+                  builder: (context, profileDetailsSnapshot) {
+                    if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    } else if (profileDetailsSnapshot.hasError) {
+                      return Text('Error: ${profileDetailsSnapshot.error}');
+                    } else {
+                      DateTime now = DateTime.now();
+                      var commentDateTime = DateTime.parse(document['dateTime'] as String);
+                      var difference = now.difference(commentDateTime);
+                      if (difference.inHours >= 48) {
+                        deletePost(documentId);
+                        return Container();
+                      } else {
+                      }
+                      String formattedTime = _formatTimeDifference(difference);
+                      UserProfileDetails? userDetails = profileDetailsSnapshot.data;
+                      String? profileImageUrl = userDetails?.profileImageUrl;
+                      String? firstName = userDetails?.firstName;
+                      return buildImageCard(
+                        ImageDocument(
+                          imageUrl: document['imageUrl'],
+                          title: document['title'],
+                          userId: document['userId'],
+                          likes: document['likes'],
+                          likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
+                          // firstName: document['firstName'],
+                          // profileImageUrl: document['profileImageUrl'],
+                          commentsCount: document['commentsCount'],
+                          dateTime: formattedTime,
+                          status: document['status'],
+                        ),
+                        documentsId: documentId,
+                        postProfileImageUrl: profileImageUrl,
+                        postFirstName:firstName,
+                      );
+                    }
+                  },
                 );
               },
             ),
@@ -84,7 +110,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     );
   }
 
-  Widget buildImageCard(ImageDocument document, {required String documentsId}) {
+  Widget buildImageCard(ImageDocument document, {required String documentsId, required String? postProfileImageUrl, required String? postFirstName}) {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     late bool alreadyLiked = (document.likedBy.contains(currentUserId));
@@ -92,6 +118,10 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     if (document.userId == currentUserId) {
       currentUserIsViewingUser = true;
     }
+    fetchUserDetails(userId: document.userId);
+    print(document.userId);
+    print(profileImageUrl);
+    print(firstName);
     return Visibility(
       visible: isVisible(document.userId),
       child: Column(
@@ -123,7 +153,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                       ),
                       child: ClipOval(
                         child: Image.network(
-                          document.profileImageUrl,
+                          postProfileImageUrl!,
                           width: 30, // Increased width
                           height: 30, // Increased height
                           fit: BoxFit.cover,
@@ -131,7 +161,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                       ),
                     ),
                     Text(
-                      document.firstName,
+                      postFirstName!,
                       style: const TextStyle(fontSize: 20),
                     ),
                     const SizedBox(width: 8.0),
@@ -283,8 +313,8 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   bool isVisible(String userId) {
     if (widget.showOnlyCurrentUserPosts == true) {
       User? user = FirebaseAuth.instance.currentUser;
-      String? CurrentuserId = user?.uid;
-      if (CurrentuserId != userId) {
+      String? currentUserId = user?.uid;
+      if (currentUserId != userId) {
         return false;
       }
     }
