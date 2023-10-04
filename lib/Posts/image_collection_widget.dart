@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:facebook/Posts/comment_input_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -93,8 +94,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                   },
                 );
               },
-
-
             ),
           );
         },
@@ -182,9 +181,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
             Text('Title: ${document.title}'),
             CachedNetworkImage(
               imageUrl: document.imageUrl,
-              // width: 200,
-              // height: 200,
-              // fit: BoxFit.cover,
+
             ),
             const SizedBox(height: 10.0),
             Row(
@@ -247,6 +244,12 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                     Text('Comments: ${document.commentsCount}'),
                   ],
                 ),
+                // IconButton(
+                //   icon: Icon(Icons.emoji_emotions), // Emoji icon
+                //   onPressed: () {
+                //     openEmojiPicker(context); // Open the emoji picker modal bottom sheet
+                //   },
+                // ),
                 Row(
                   children: [
                     IconButton(
@@ -326,23 +329,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     });
   }
 
-  // fetchUserDetails({required String userId}) async {
-  //   CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-  //   // Query the collection to find documents that match the provided mobile number
-  //   DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
-  //   if (documentSnapshot.exists) {
-  //     Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
-  //     if (data != null) {
-  //       profileImageUrl = data['profileImageUrl'];
-  //       firstName = data['firstName'];
-  //     } else {
-  //       print('Document data is null.');
-  //     }
-  //   } else {
-  //     String message = "user details not found";
-  //     showAlert(context, message);
-  //   }
-  // }
 
   String _formatTimeDifference(Duration difference) {
     if (difference.inMinutes < 60) {
@@ -353,6 +339,57 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
       return '${difference.inDays} days ago';
     }
   }
+
+  // void openEmojiPicker(BuildContext context) {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return Column(
+  //         children: [
+  //           SizedBox(
+  //             width: 500,
+  //             height: 100,
+  //             child: Row(
+  //               children: [
+  //                 Container(
+  //                   width: 300,
+  //                   height: 100,
+  //                   child: TextField(
+  //                     controller: _messageController,
+  //                     decoration: const InputDecoration(
+  //                       hintText: 'Message....',
+  //                     ),
+  //                     onSubmitted: (String text) {
+  //                       sendMessageOrIcon();
+  //                       Navigator.pop(context);// Call your sendIcon function when the user submits the text (e.g., by pressing Enter)
+  //                     },
+  //                   ),
+  //                 ),
+  //                 const SizedBox(width: 10),
+  //                 IconButton(
+  //                   icon: const Icon(Icons.send),
+  //                   onPressed: () {
+  //                     sendMessageOrIcon();
+  //                     Navigator.pop(context);
+  //                   },
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           Expanded(
+  //             child: EmojiPicker(
+  //               onEmojiSelected: (category, emoji) {
+  //                 setState(() {
+  //                   _messageController.text += emoji.emoji;
+  //                 });
+  //               },
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 }
 
 

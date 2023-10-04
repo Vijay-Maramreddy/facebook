@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -69,6 +70,9 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
   }
 
   void _saveComment() async {
+    if (!mounted) {
+      return; // Check if the widget is still mounted
+    }
     String comment = _commentController.text;
 
     // Get the current user's information
@@ -131,19 +135,19 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       'commentsCount': retrievedDoc.commentsCount,
     });
 
-    setState(() {
-      _comments.add(Comment(
-        comment: comment,
-        userId: userId!,
-        profileImageUrl: profileImageUrl,
-        firstName: firstName,
-        dateTime: formattedDateTime,
-        documentId: '',
-        imageId: '',
-      ));
-      _commentController.clear();
-    });
-    Navigator.pop(context); // Close the bottom sheet after saving
+    _comments.add(Comment(
+      comment: comment,
+      userId: userId!,
+      profileImageUrl: profileImageUrl,
+      firstName: firstName,
+      dateTime: formattedDateTime,
+      documentId: '',
+      imageId: '',
+    ));
+    _commentController.clear();
+    if (mounted) {
+      Navigator.pop(context); // Close the bottom sheet after saving
+    }// Close the bottom sheet after saving
   }
 
   @override
@@ -160,18 +164,8 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       child: Container(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min,  // Set to MainAxisSize.min
           children: [
-            TextField(
-              controller: _commentController,
-              decoration: const InputDecoration(labelText: 'Enter your comment'),
-            ),
-            const SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _saveComment,
-              child: const Text('Save Comment'),
-            ),
-            const SizedBox(height: 8),
             Visibility(
               visible: commentsVisible,
               child: Column(
@@ -180,7 +174,48 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
                   return CommentWidget(comment);
                 }).toList(),
               ),
-            ), // Text input field for adding a new comment
+            ),
+            Container(
+              height: 100,  // Set a fixed height for the emoji picker
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      width: 300,
+                      height: 100,
+                      child: TextField(
+                        controller: _commentController,
+                        decoration: const InputDecoration(
+                          hintText: 'Message....',
+                        ),
+                        onSubmitted: (String text) {
+                          _saveComment();
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () {
+                      _saveComment();
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 300,  // Set a fixed height for the emoji picker
+              child: EmojiPicker(
+                onEmojiSelected: (category, emoji) {
+                  setState(() {
+                    _commentController.text += emoji.emoji;
+                  });
+                },
+              ),
+            ),
           ],
         ),
       ),

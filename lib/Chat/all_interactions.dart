@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:html';
 
+import 'package:chewie/chewie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rxdart/rxdart.dart';
 
-import 'package:flutter/gestures.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 class AllInteractions extends StatefulWidget {
   late String? interactedBy;
@@ -44,11 +43,42 @@ class _AllInteractionsState extends State<AllInteractions> {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               print(data['message']);
               final messageText = data['message'];
+
+              final VideoPlayerController videoPlayerController = VideoPlayerController.network(data['videoUrl']);
+              final ChewieController chewieController = ChewieController(
+                videoPlayerController: videoPlayerController,
+                aspectRatio: 16 / 9, // Adjust the aspect ratio as needed
+                autoPlay: true,
+                looping: true,
+              );
               return Container(
                 child: Column(
                   children: [
                     if (data['interactedBy'] == widget.interactedBy)
-                      if (data['imageUrl'] == "")
+                      if(data['videoUrl']!="")
+                        Column(
+                          // mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                            Container(
+                                alignment: Alignment.topRight,
+                                width: 400,
+                                height: 200,
+                                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                child: Chewie(controller: chewieController),
+                            ),
+                            Container(
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              child: Text(data['message']),
+                            ),
+                            Container(
+                              alignment: Alignment.centerRight,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Text(data['dateTime']),
+                            ),
+                          ]
+                        )
+                      else if(data['imageUrl'] == "" && data['videoUrl']=="")
                         if (data['message']!.startsWith('https://'))
                           Column(children: [
                             MouseRegion(
@@ -111,44 +141,67 @@ class _AllInteractionsState extends State<AllInteractions> {
                             )
                           ],
                         )
-                    else if (data['imageUrl'] == "")
-                      if (data['message']!.startsWith('https://'))
-                        Column(children: [
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () {
-                                window.open(data['message']!, '_blank');
-                              },
-                              child: Container(
+                    else
+                      if(data['videoUrl']!="")
+                        Column(
+                            children: [
+                              Container(
+                                alignment: Alignment.centerLeft,
+                                width: 400,
+                                height: 200,
+                                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                child: Chewie(controller: chewieController),
+                              ),
+                              Container(
                                 alignment: Alignment.centerLeft,
                                 padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                child: Text(
-                                  data['message'],
-                                  style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                child: Text(data['message']),
+                              ),
+                              Container(
+                                alignment: Alignment.centerLeft,
+                                padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                child: Text(data['dateTime']),
+                              ),
+                            ]
+                        )
+                      else if (data['imageUrl'] == "")
+                        if (data['message']!.startsWith('https://'))
+                          Column(children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  window.open(data['message']!, '_blank');
+                                },
+                                child: Container(
+                                  alignment: Alignment.centerLeft,
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  child: Text(
+                                    data['message'],
+                                    style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Text(data['dateTime']),
-                          ),
-                        ])
-                      else
-                        Column(children: [
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: Text(data['message']),
-                          ),
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Text(data['dateTime']),
-                          ),
-                        ])
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Text(data['dateTime']),
+                            ),
+                          ])
+                        else
+                          Column(children: [
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              child: Text(data['message']),
+                            ),
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Text(data['dateTime']),
+                            ),
+                          ])
                     else
                       Column(
                         children: [

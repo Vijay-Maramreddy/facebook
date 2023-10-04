@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/home/show_user_details_page.dart';
 import 'package:facebook/main.dart';
+import 'package:facebook/reels/reels_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -35,11 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
   late bool showOnlyCurrentUserPosts = false;
   late bool status = false;
 
-  List<String> friendsIds=[];
+  List<String> friendsIds = [];
 
   List<String> allNames = [];
   List<String> filteredNames = [];
   late String currentUserId;
+  late int newMessagesCount=0;
 
   void onSearchTextChanged(String searchText) {
     filteredNames.clear();
@@ -64,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
     User? user = FirebaseAuth.instance.currentUser;
     currentUserId = user!.uid;
     super.initState();
-    //
+    fetchNewMessageCount();
   }
 
   @override
@@ -83,9 +85,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ShowUserDetailsPage(
-                        userId:currentUserId,
-                      ),
+                      builder: (context) =>
+                          ShowUserDetailsPage(
+                            userId: currentUserId,
+                          ),
                     ),
                   );
                 },
@@ -107,6 +110,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.white, // Customize the color as needed
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage()));
+                  // Add your left-end icon onPressed functionality here.
+                },
+              ),
+              Text("$newMessagesCount", style: TextStyle(color: Colors.red)),
+              IconButton(
+                icon: const Icon(Icons.video_collection_outlined),
+                color: Colors.white, // Customize the color as needed
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ReelsPage()));
                   // Add your left-end icon onPressed functionality here.
                 },
               ),
@@ -174,9 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                           Navigator.push(
                                                             context,
                                                             MaterialPageRoute(
-                                                              builder: (context) => ShowUserDetailsPage(
-                                                                userId: userDocument.id,
-                                                              ),
+                                                              builder: (context) =>
+                                                                  ShowUserDetailsPage(
+                                                                    userId: userDocument.id,
+                                                                  ),
                                                             ),
                                                           );
                                                         },
@@ -253,9 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => ShowUserDetailsPage(
-                                                      userId: currentUserId,
-                                                    ),
+                                                    builder: (context) =>
+                                                        ShowUserDetailsPage(
+                                                          userId: currentUserId,
+                                                        ),
                                                   ),
                                                 );
                                               },
@@ -328,7 +342,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Column(children: [
                     Center(
-                      child: Container(color: Colors.white, child: StatusCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts,onUploadStatus: uploadAStatus,friendsIds:friendsIds)),
+                      child: Container(color: Colors.white,
+                          child: StatusCollectionWidget(
+                              showOnlyCurrentUserPosts: showOnlyCurrentUserPosts, onUploadStatus: uploadAStatus, friendsIds: friendsIds)),
                     ),
                     Center(
                       child: Container(color: Colors.white, child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)),
@@ -416,7 +432,17 @@ class _HomeScreenState extends State<HomeScreen> {
             String message = "user details not found";
             showAlert(context, message);
           }
-          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status);
+          await addImageUrlToFirebase(
+              user.uid,
+              imageUrl,
+              title!,
+              likes,
+              commentsCount,
+              dateTime,
+              likedBy,
+              profileImageUrl,
+              firstName,
+              status);
           setState(() {});
         } else {
           print('Error: User is not authenticated.');
@@ -532,11 +558,28 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> fetchFriends() async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-    List<String> friendsId = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['friends']?.cast<String>() ?? [];    if (friendsId != null) {
-      friendsIds = List.from(friendsId)..add(currentUserId!);
+    List<String> friendsId = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['friends']?.cast<String>() ?? [];
+    if (friendsId != null) {
+      friendsIds = List.from(friendsId)
+        ..add(currentUserId!);
     } else {
       friendsIds = [currentUserId!];
     }
     print(friendsIds);
+  }
+
+  Future<void> fetchNewMessageCount() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    CollectionReference<Map<String, dynamic>> collectionRef = FirebaseFirestore.instance.collection('messageCount');
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await collectionRef.get();
+    for (QueryDocumentSnapshot<Map<String, dynamic>> document in querySnapshot.docs) {
+      if (document.data()!['interactedTo'] == currentUserId) {
+        setState(() {
+          newMessagesCount += document.data()['count']! as int;
+        });
+
+      }
+    }
   }
 }

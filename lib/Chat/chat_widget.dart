@@ -1,12 +1,15 @@
 import 'dart:typed_data';
 
+import 'package:chewie/chewie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
 
 import '../app_style.dart';
@@ -35,6 +38,21 @@ class _ChatWidgetState extends State<ChatWidget> {
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   VideoPlayerController? _videoPlayerController;
+
+  late int count;
+
+  // @override
+  // void initState() {
+  //   if(widget.documentData!=null) {
+  //     print("inside iiiiiiiiiiiii");
+  //     User? user = FirebaseAuth.instance.currentUser;
+  //     String? CurrentuserId = user?.uid;
+  //     String? interactedBy = CurrentuserId;
+  //     String? interactedTo = widget.documentId;
+  //     updateOrAddInteraction(interactedBy!, interactedTo!);
+  //     super.initState();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +155,12 @@ class _ChatWidgetState extends State<ChatWidget> {
                           ),
                         ),
                         IconButton(
+                          icon: Icon(Icons.emoji_emotions), // Emoji icon
+                          onPressed: () {
+                            openEmojiPicker(context); // Open the emoji picker modal bottom sheet
+                          },
+                        ),
+                        IconButton(
                           onPressed: uploadImageAndSaveUrl,
                           icon: Icon(Icons.add_a_photo),
                         ),
@@ -150,29 +174,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                     ),
                   ),
                   IconButton(
-                      onPressed: () async {
-                        User? user = FirebaseAuth.instance.currentUser;
-                        String? CurrentuserId = user?.uid;
-                        DateTime now = DateTime.now();
-                        String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-
-                        final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-                        String? imageUrl = '';
-                        String text = _messageController.text;
-                        String groupId = combineIds(CurrentuserId, widget.documentId);
-                        if (text.isNotEmpty) {
-                          await interactionsCollection.add({
-                            'interactedBy': CurrentuserId,
-                            'interactedWith': widget.documentId,
-                            'imageUrl': imageUrl,
-                            'dateTime': formattedDateTime,
-                            'message': text,
-                            'groupId': groupId,
-                          });
-                          _messageController.clear();
-                          // setState(() {}); // Clear the text field after sending the message
-                        }
+                      onPressed: (){
+                        sendMessageOrIcon();
                       },
+
                       icon: Icon(Icons.send)),
                   IconButton(
                     onPressed: () async {
@@ -219,6 +224,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           'dateTime': dateTime,
           'message': message,
           'groupId': groupId,
+          'videoUrl': '',
         });
       }
     } else {
@@ -316,29 +322,39 @@ class _ChatWidgetState extends State<ChatWidget> {
       'dateTime': formattedDateTime,
       'message': message,
       'groupId': groupId,
+      'videoUrl': '',
     });
     // Clear the text field after sending the message
     _messageController.clear();
   }
 
-  Future<String?> _showVideoPickerDialog() async {
-    if (video != null) {
+  Future<String?> _showVideoPickerDialog(String? videoUrl) async {
+    if (videoUrl != null && videoUrl.isNotEmpty) {
       print("inside video dialog box");
       var message = '';
+
+      final VideoPlayerController _videoPlayerController = VideoPlayerController.network(videoUrl);
+      await _videoPlayerController.initialize();
+
+      final ChewieController _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController,
+        aspectRatio: 16 / 9,
+        autoPlay: true,
+        looping: true,
+      );
       await showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (context) {
           return AlertDialog(
             title: const Text('Send a Video'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Display a thumbnail or preview of the video if available
-                // You can use a VideoPlayer widget for this
+                // Display the video using ChewieController
                 SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: VideoPlayer(video! as VideoPlayerController),
+                  width: 500,
+                  height: 400,
+                  child: Chewie(controller: _chewieController),
                 ),
                 TextField(
                   onChanged: (value) {
@@ -365,6 +381,11 @@ class _ChatWidgetState extends State<ChatWidget> {
           );
         },
       );
+
+      // Dispose the controllers after the dialog is closed
+      _videoPlayerController.dispose();
+      _chewieController.dispose();
+
       return message;
     } else {
       return '';
@@ -381,11 +402,13 @@ class _ChatWidgetState extends State<ChatWidget> {
     video = await pickVideoFromGallery();
 
     if (video != null) {
-      String? message = await _showVideoPickerDialog();
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? videoUrl = await uploadVideoToStorage('videos/' + uuid, video!);
+      print(videoUrl);
+      String? message = await _showVideoPickerDialog(videoUrl);
+
 
       final CollectionReference interactionsCollection =
       FirebaseFirestore.instance.collection('interactions');
@@ -411,23 +434,109 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   Future<String?> uploadVideoToStorage(String childName, XFile videoFile) async {
     String uuid = AppStyles.uuid();
-    // String videoFileName = '$childName/$uuid.mp4';
-    //
-    // // Create a File object using dart:io's File class
-    // File file = File(videoFile.path!);
-    //
-    // Reference ref = _storage.ref().child(videoFileName);
-    // UploadTask uploadTask = ref.putFile(file);
-    // TaskSnapshot snapshot = await uploadTask;
-    // String downloadUrl = await snapshot.ref.getDownloadURL();
     final bytes = await videoFile.readAsBytes();
     FirebaseStorage storage = FirebaseStorage.instance;
-    // var videoFileName = const Uuid().v4();
-    Reference child = storage.ref("messagevideos").child(uuid);
+    var videoFileName=const Uuid().v4();
+    Reference child = storage.ref("messagevideos").child(videoFileName);
 
     await child.putData(bytes);
     // TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await child.getDownloadURL();
+    print(downloadUrl);
 
     return downloadUrl;
-  }}
+  }
+
+  void openEmojiPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          children: [
+            SizedBox(
+              width: 500,
+              height: 100,
+              child: Row(
+                children: [
+                  Container(
+                    width: 300,
+                    height: 100,
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Message....',
+                      ),
+                      onSubmitted: (String text) {
+                        sendMessageOrIcon();
+                        Navigator.pop(context);// Call your sendIcon function when the user submits the text (e.g., by pressing Enter)
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () {
+                      sendMessageOrIcon();
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: EmojiPicker(
+                onEmojiSelected: (category, emoji) {
+                  setState(() {
+                    _messageController.text += emoji.emoji;
+                  });
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void sendMessageOrIcon() async{
+    User? user = FirebaseAuth.instance.currentUser;
+    String? CurrentuserId = user?.uid;
+
+    CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
+        .where('interactedBy', isEqualTo:CurrentuserId)
+        .where('interactedTo', isEqualTo: widget.documentId)
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+      DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+      count= doc['count'];
+      count=count+1;
+    await doc.reference.update({'count': count});
+      // await doc.reference.update({'count': currentCount + 1});
+
+      DateTime now = DateTime.now();
+      String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
+      final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+      String? imageUrl = '';
+      String text = _messageController.text;
+      String groupId = combineIds(CurrentuserId, widget.documentId);
+      if (text.isNotEmpty) {
+        await interactionsCollection.add({
+          'interactedBy': CurrentuserId,
+          'interactedWith': widget.documentId,
+          'imageUrl': imageUrl,
+          'dateTime': formattedDateTime,
+          'message': text,
+          'groupId': groupId,
+          'videoUrl':'',
+        });
+        _messageController.clear();
+        // setState(() {}); // Clear the text field after sending the message
+      }
+  }
+
+
+
+
+}

@@ -250,6 +250,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+
                               Row(
                                 children: [
                                   IconButton(
