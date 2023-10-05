@@ -22,6 +22,7 @@ class _ChatPageState extends State<ChatPage> {
   int count=0;
   int counter=0;
   Map<String, int> resultMap= {};
+  List<String> blockedList=[];
   // late List<String> friends=[];
 
   @override
@@ -29,15 +30,12 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       querySnapshot = getUsers();
       retrieveFieldValues();
+      getBlockedList();
 
     });
 
 
     super.initState();
-    // setState(() {
-    //   querySnapshot = getUsers();
-    //   retrieveFieldValues();
-    // });
   }
 
   Future<QuerySnapshot<Map<String, dynamic>>> getUsers() async {
@@ -170,10 +168,12 @@ class _ChatPageState extends State<ChatPage> {
                                                         querySnapshot.docs[index].data()['firstName'],
                                                         style: const TextStyle(fontSize: 26),
                                                       ),
-                                                       if((resultMap[key])!=null)
-                                                           Text("$value", style: TextStyle(color: Colors.red))
-                                                      else
-                                                        Container()
+                                                       SizedBox(
+                                                         child:Visibility(
+                                                           visible: !blockedList.contains(querySnapshot.docs[index].id),
+                                                           child: Text("$value", style: TextStyle(color: Colors.red)),
+                                                         ),
+                                                       )
                                                     ],
                                                   ),
                                                 ),
@@ -202,7 +202,7 @@ class _ChatPageState extends State<ChatPage> {
               scrollDirection: Axis.horizontal,
               child: SizedBox(
                 width: 1100,
-                child: ChatWidget(documentData: selectedDocument, documentId: selectedDocumentId,groupId:groupId ),
+                child: ChatWidget(documentData: selectedDocument, documentId: selectedDocumentId,groupId:groupId,isBlocked:blockedList.contains(selectedDocumentId) ),
               ),
             ),
           ],
@@ -298,6 +298,16 @@ class _ChatPageState extends State<ChatPage> {
       print('Error retrieving field values: $e');
       throw e; // Rethrow the error to propagate it further if needed
     }
+  }
+
+  Future<void> getBlockedList() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    DocumentReference documentReference =
+    FirebaseFirestore.instance.collection('users').doc(currentUserId);
+    DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
+        await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
+    blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
   }
 
 

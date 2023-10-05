@@ -166,6 +166,16 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,  // Set to MainAxisSize.min
           children: [
+            // TextField(
+            //   controller: _commentController,
+            //   decoration: const InputDecoration(labelText: 'Enter your comment'),
+            // ),
+            // const SizedBox(height: 16.0),
+            // ElevatedButton(
+            //   onPressed: _saveComment,
+            //   child: const Text('Save Comment'),
+            // ),
+            const SizedBox(height: 8),
             Visibility(
               visible: commentsVisible,
               child: Column(

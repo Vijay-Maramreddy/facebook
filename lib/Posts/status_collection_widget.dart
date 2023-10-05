@@ -35,16 +35,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // return SingleChildScrollView(
-    //   child: StreamBuilder<QuerySnapshot>(
-    //       stream: widget.friendsIds != null && widget.friendsIds!.isNotEmpty
-    //           ? FirebaseFirestore.instance
-    //           .collection('images')
-    //           .where('status', isEqualTo: true)
-    //           .where('userId', whereIn: widget.friendsIds)
-    //           .orderBy('dateTime', descending: true)
-    //           .snapshots()
-    //           : null,
+
           return SingleChildScrollView(
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance

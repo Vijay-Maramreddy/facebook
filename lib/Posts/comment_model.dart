@@ -132,10 +132,8 @@ class _CommentWidgetState extends State<CommentWidget> {
 
   Future<void> deleteComment(String documentId, String imageId) async {
     try {
-      // Access the collection and delete the document with the given ID
       await FirebaseFirestore.instance.collection('images').doc(imageId).collection('comments').doc(documentId).delete();
 
-      // ... Rest of your delete logic ...
       DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(imageId).get();
       ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
       print(retrievedDoc.commentsCount);

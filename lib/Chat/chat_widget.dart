@@ -26,7 +26,8 @@ class ChatWidget extends StatefulWidget {
   final Map<String, dynamic>? documentData;
   final String? documentId;
   final String? groupId;
-  ChatWidget({super.key, this.documentData, this.documentId, this.groupId});
+  final bool? isBlocked;
+  ChatWidget({super.key, this.documentData, this.documentId, this.groupId, required this.isBlocked});
 
   @override
   State<ChatWidget> createState() => _ChatWidgetState();
@@ -40,6 +41,7 @@ class _ChatWidgetState extends State<ChatWidget> {
   VideoPlayerController? _videoPlayerController;
 
   late int count;
+  late bool isBlocked=widget.isBlocked!;
 
   // @override
   // void initState() {
@@ -124,69 +126,95 @@ class _ChatWidgetState extends State<ChatWidget> {
                     ),
                   ),
                 ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.vertical, // Change to vertical scroll
-                  child: Container(
-                    height: 500,
-                    child: Center(
-                      child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId, groupId: widget.groupId),
-                    ),
-                  ),
-                ),
-                Row(children: [
-                  Container(
-                    decoration: customBoxDecoration,
-                    margin: const EdgeInsets.all(10),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                    width: 850,
-                    height: 40,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            child: TextField(
-                              controller: _messageController,
-                              decoration: const InputDecoration(
-                                hintText: 'Enter a message',
-                                border: InputBorder.none,
+                Visibility(
+                  visible: !isBlocked!,
+                  child: Column(
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.vertical, // Change to vertical scroll
+                        child: Container(
+                          height: 500,
+                          child: Center(
+                            child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId, groupId: widget.groupId),
+                          ),
+                        ),
+                      ),
+                      Row(children: [
+                        Container(
+                          decoration: customBoxDecoration,
+                          margin: const EdgeInsets.all(10),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                          width: 850,
+                          height: 40,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  child: TextField(
+                                    controller: _messageController,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Enter a message',
+                                      border: InputBorder.none,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              IconButton(
+                                icon: Icon(Icons.emoji_emotions), // Emoji icon
+                                onPressed: () {
+                                  openEmojiPicker(context); // Open the emoji picker modal bottom sheet
+                                },
+                              ),
+                              IconButton(
+                                onPressed: uploadImageAndSaveUrl,
+                                icon: Icon(Icons.add_a_photo),
+                              ),
+                              IconButton(onPressed: () async {
+                                print("Button is pressed");
+                                await uploadVideoAndSaveUrl();
+                              },
+                                icon: Icon(Icons.video_library),
+                              )
+                            ],
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.emoji_emotions), // Emoji icon
-                          onPressed: () {
-                            openEmojiPicker(context); // Open the emoji picker modal bottom sheet
-                          },
-                        ),
+                            onPressed: (){
+                              sendMessageOrIcon();
+                            },
+
+                            icon: Icon(Icons.send)),
                         IconButton(
-                          onPressed: uploadImageAndSaveUrl,
-                          icon: Icon(Icons.add_a_photo),
+                          onPressed: () async {
+                            print("button is pressed");
+                            await sendMessageWithLocation();
+                          },
+                          icon: Icon(Icons.map),
                         ),
-                        IconButton(onPressed: () async {
-                          print("Button is pressed");
-                          await uploadVideoAndSaveUrl();
-                        },
-                          icon: Icon(Icons.video_library),
+                      ])
+                    ],
+                  ),
+                ),
+                Visibility(
+                    visible: isBlocked!,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text("You have blocked this User, please Unblock to interact to the User"),
+                        IconButton(
+                            onPressed:(){
+                              removeFromBlocked();
+                              setState(() {
+
+                              });
+                            },
+                            icon: Icon(Icons.block),
                         )
                       ],
-                    ),
-                  ),
-                  IconButton(
-                      onPressed: (){
-                        sendMessageOrIcon();
-                      },
-
-                      icon: Icon(Icons.send)),
-                  IconButton(
-                    onPressed: () async {
-                      print("button is pressed");
-                      await sendMessageWithLocation();
-                    },
-                    icon: Icon(Icons.map),
-                  ),
-                ])
+                    )
+                )
               ]),
             ),
           ),
@@ -536,7 +564,32 @@ class _ChatWidgetState extends State<ChatWidget> {
       }
   }
 
+  Future<void> removeFromBlocked() async {
+    // Get the document reference
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    DocumentReference documentReference =
+    FirebaseFirestore.instance.collection('users').doc(currentUserId);
 
+    try {
+      DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
+      await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
+      if (documentSnapshot.exists) {
+        List<String> blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
+        blockedList.remove(widget.documentId!);
+
+        // Update the document with the modified blocked list
+        await documentReference.update({'blocked': blockedList});
+        setState(() {
+          isBlocked=false;
+        });
+      } else {
+        print('Document with ID $currentUserId not found.');
+      }
+    } catch (e) {
+      print('Error adding to blocked list and updating document: $e');
+    }
+  }
 
 
 }

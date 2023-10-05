@@ -35,6 +35,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   late String imageUrl;
   late String loadImageUrl = '';
   late String finalImage;
+  late List<String> blockedList=[];
 
   FirebaseAuth auth = FirebaseAuth.instance;
 
@@ -45,13 +46,15 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   late String requestedBy;
 
   bool editable = false;
-  bool isUser=false;
+  bool isUser = false;
+  bool isBlocked=false;
 
   @override
   void initState() {
     loadFriendsStatus();
     loadUserDetails();
     updateEditable();
+    blocked();
     print('hi');
     super.initState();
   }
@@ -90,7 +93,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     }
   }
 
-
   Future<String> uploadImageToStorage(String childName, Uint8List file) async {
     print("inside upload image to storage");
     Reference ref = _storage.ref().child(childName);
@@ -125,12 +127,12 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
         _ageController.text = userDocument['age'] ?? '';
         _genderController.text = userDocument['gender'] ?? '';
         loadImageUrl = userDocument['profileImageUrl'] ?? '';
+
       });
     } else {
       String message = "user details not found";
       showAlert(context, message);
     }
-
   }
 
   @override
@@ -335,7 +337,9 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                             backgroundColor: Colors.yellow,
                             foregroundColor: Colors.black,
                           ),
-                          onPressed: (){savedata();},
+                          onPressed: () {
+                            savedata();
+                          },
                           child: const Padding(
                             padding: EdgeInsets.fromLTRB(10, 5, 10, 5),
                             child: Text('Save'),
@@ -365,10 +369,46 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                     },
                                     child: Text("Cancel request"))
                               ])),
-                          Visibility(visible: friendStatus, child: ElevatedButton(onPressed: () { removeFriend();}, child: Text("Remove Friend"))),
+                          Visibility(
+                              visible: friendStatus,
+                              child: ElevatedButton(
+                                  onPressed: () {
+                                    removeFriend();
+                                  },
+                                  child: Text("Remove Friend")
+                              )
+                          ),
                         ],
                       ),
-                    )
+                    ),
+                    SizedBox(height: 20,),
+                    Visibility(
+                        visible: !editable,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Visibility(
+                                visible: !isBlocked,
+                                child: ElevatedButton(
+                                    onPressed: () {
+                                      addToBlocked();
+                                    },
+                                    child: Text("Block"),
+                                )
+                            ),
+                            Visibility(
+                                visible: isBlocked,
+                                child: ElevatedButton(
+                                    onPressed: () {
+                                      removeFromBlocked();
+                                    },
+                                    child: Text("UnBlock"),
+                                )
+                            ),
+                          ],
+                        )
+                    ),
                   ],
                 ),
               ),
@@ -401,7 +441,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     });
   }
 
-    cancelRequest() async {
+  cancelRequest() async {
     print("inside cancel request");
     User? user = auth.currentUser;
     requestedBy = user!.uid;
@@ -418,7 +458,8 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       setState(() {});
     }
   }
-  removeFriend() async{
+
+  removeFriend() async {
     print("inside cancel request");
     User? user = auth.currentUser;
     requestedBy = user!.uid;
@@ -437,9 +478,10 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
         userDoc.set({'friends': friendsList}, SetOptions(merge: true));
       } else {
-        userDoc.set({'Not friends': [requestedBy]});
+        userDoc.set({
+          'Not friends': [requestedBy]
+        });
       }
-
     }).catchError((e) {
       print('Error getting user document: $e');
     });
@@ -455,15 +497,13 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
         usersDoc.set({'friends': friendsList}, SetOptions(merge: true));
       } else {
-        usersDoc.set({'Not friends': [requestedTo]});
+        usersDoc.set({
+          'Not friends': [requestedTo]
+        });
       }
-
-
-
     }).catchError((e) {
       print('Error getting user document: $e');
     });
-
   }
 
   String createRequestId(String requestedBy, String requestedTo) {
@@ -484,7 +524,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       print('querySnapshot is not empty');
 
       querySnapshot.docs.forEach((doc) {
-        friendStatus=doc['friendStatus'];
+        friendStatus = doc['friendStatus'];
         requestStatus = doc['requestStatus'];
       });
     } else {
@@ -495,7 +535,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       List<dynamic> friends = userDocument['friends'];
 
       if (friends != null && friends.contains(requestedBy)) {
-        friendStatus=true;
+        friendStatus = true;
         // requestStatus=true;
         print("friend status is $friendStatus");
         // print("friend status is $requestStatus");
@@ -506,9 +546,80 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   void updateEditable() {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-    if(widget.userId==currentUserId)
-      {
-        editable=true;
-      }
+    if (widget.userId == currentUserId) {
+      editable = true;
+    }
   }
+
+  void blocked() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+    var userDocument = await usersCollection.doc(currentUserId).get();
+    if(userDocument['blocked'].contains(widget.userId))
+      {
+        isBlocked=true;
+      }
+    else
+      isBlocked=false;
+  }
+
+  // import 'package:cloud_firestore/cloud_firestore.dart';
+
+// Function to add a string to the blocked list and update the document
+  Future<void> addToBlocked() async {
+    // Get the document reference
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    DocumentReference documentReference =
+    FirebaseFirestore.instance.collection('users').doc(currentUserId);
+
+    try {
+      DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
+      await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
+      if (documentSnapshot.exists) {
+        List<String> blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
+        blockedList.add(widget.userId!);
+
+        // Update the document with the modified blocked list
+        await documentReference.update({'blocked': blockedList});
+        setState(() {
+          isBlocked=true;
+        });
+      } else {
+        print('Document with ID $currentUserId not found.');
+      }
+    } catch (e) {
+      print('Error adding to blocked list and updating document: $e');
+    }
+  }
+
+  Future<void> removeFromBlocked() async {
+    // Get the document reference
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    DocumentReference documentReference =
+    FirebaseFirestore.instance.collection('users').doc(currentUserId);
+
+    try {
+      DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
+      await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
+      if (documentSnapshot.exists) {
+        List<String> blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
+        blockedList.remove(widget.userId!);
+
+        // Update the document with the modified blocked list
+        await documentReference.update({'blocked': blockedList});
+        setState(() {
+          isBlocked=false;
+        });
+      } else {
+        print('Document with ID $currentUserId not found.');
+      }
+    } catch (e) {
+      print('Error adding to blocked list and updating document: $e');
+    }
+  }
+
+
 }
