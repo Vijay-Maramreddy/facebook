@@ -20,26 +20,22 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   String groupName = '';
   String groupDescription = '';
   late List<String> friendsUid;
-  late List<List<String>> friendsData=[];
+  late List<List<String>> friendsData = [];
   final FirebaseStorage _storage = FirebaseStorage.instance;
   Uint8List? _image;
-
 
   @override
   void initState() {
     super.initState();
     setState(() {
       fetchFriends();
-
     });
   }
 
   Future<void> fetchFriends() async {
-
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-    DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-    await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
+    DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
     // Check if the document exists and contains the 'friends' key
     if (documentSnapshot.exists && documentSnapshot.data()?['friends'] != null) {
       friendsUid = List<String>.from(documentSnapshot.data()?['friends']);
@@ -47,8 +43,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
       print('User or friends not found.');
     }
     for (var friend in friendsUid) {
-      DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-      await FirebaseFirestore.instance.collection('users').doc(friend).get();
+      DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('users').doc(friend).get();
 
       if (documentSnapshot.exists) {
         Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
@@ -56,7 +51,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         String profileImageUrl = data['profileImageUrl'];
 
         // Add the extracted data to a list
-        List<String> friendData = [friend,name, profileImageUrl];
+        List<String> friendData = [friend, name, profileImageUrl];
         setState(() {
           friendsData.add(friendData);
         });
@@ -69,38 +64,35 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   Future<void> createGroup() async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-    List<String> admins=[currentUserId!];
+    List<String> admins = [currentUserId!];
     String uuid = AppStyles.uuid();
     selectedFriends.add(currentUserId);
     DateTime now = DateTime.now();
     String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-    String imageUrl='';
-    if(_image!=null) {
+    String imageUrl = '';
+    if (_image != null) {
       imageUrl = await uploadImageToStorage('groupImage/' + uuid, _image!);
     }
     CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
-    String uid=AppStyles.uuid();
+    String uid = AppStyles.uuid();
     Map<String, dynamic> groupData = {
       'groupName': groupName,
       'description': groupDescription,
       'groupProfileImageUrl': imageUrl,
-      'admin':admins,
-      'groupMembers':selectedFriends,
-      'groupId':uid,
-      'dateTime':dateTime,
+      'admin': admins,
+      'groupMembers': selectedFriends,
+      'groupId': uid,
+      'dateTime': dateTime,
     };
     await groupsCollection.doc(uid).set(groupData);
 
     for (var friend in selectedFriends) {
-      DocumentReference friendDocRef =
-      FirebaseFirestore.instance.collection('users').doc(friend);
+      DocumentReference friendDocRef = FirebaseFirestore.instance.collection('users').doc(friend);
 
-      DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-      await friendDocRef.get() as DocumentSnapshot<Map<String, dynamic>>;
+      DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await friendDocRef.get() as DocumentSnapshot<Map<String, dynamic>>;
 
       if (documentSnapshot.exists) {
-        List<String> existingGroups =
-        List<String>.from(documentSnapshot.data()?['groups'] ?? []);
+        List<String> existingGroups = List<String>.from(documentSnapshot.data()?['groups'] ?? []);
         existingGroups.add(uid);
 
         await friendDocRef.update({'groups': existingGroups});
@@ -119,7 +111,6 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     });
   }
   // Function to handle creation of the group
-
 
   @override
   Widget build(BuildContext context) {
@@ -143,20 +134,19 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                         width: 2.0,
                       ),
                     ),
-                    child:
-                    _image != null
+                    child: _image != null
                         ? ClipOval(
-                      child: Image.memory(
-                        _image!,
-                        width: 200, // Increased width
-                        height: 200, // Increased height
-                        fit: BoxFit.cover,
-                      )
-                    ):const Icon(
-                      Icons.camera_alt,
-                      size: 80, // Increased size
-                      color: Colors.blue,
-                    ),
+                            child: Image.memory(
+                            _image!,
+                            width: 200, // Increased width
+                            height: 200, // Increased height
+                            fit: BoxFit.cover,
+                          ))
+                        : const Icon(
+                            Icons.camera_alt,
+                            size: 80, // Increased size
+                            color: Colors.blue,
+                          ),
                   ),
                 ),
                 Expanded(
@@ -173,10 +163,11 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                     ],
                   ),
                 )
-
               ],
             ),
-            SizedBox(height: 20,),
+            SizedBox(
+              height: 20,
+            ),
             Column(
               children: friendsData.map((item) {
                 return CheckboxListTile(
@@ -202,7 +193,6 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                         ),
                       ),
                       Text(item[1]),
-
                     ],
                   ),
                   value: selectedFriends.contains(item[0]),

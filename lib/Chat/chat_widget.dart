@@ -56,12 +56,12 @@ class _ChatWidgetState extends State<ChatWidget> {
     String? CurrentuserId = user?.uid;
     print(widget.documentId);
     if (widget.documentData == null) {
-      return SingleChildScrollView(
+      return const SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Container(
+        child: SizedBox(
           width: 1000,
           height: 600,
-          child: const Scaffold(
+          child: Scaffold(
             body: Text("select a friend"),
           ),
         ),

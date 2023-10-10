@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import 'package:video_player/video_player.dart';
 
+import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import '../reels/video_container.dart';
 
@@ -31,6 +32,9 @@ class AllInteractions extends StatefulWidget {
 }
 
 class _AllInteractionsState extends State<AllInteractions> {
+
+  String currentMessageFirstName="";
+  String currentMessageProfileImageUrl="";
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -206,6 +210,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                             child: Text(data['dateTime']),
                           ),
                         ])
+
                     else
                       Column(
                         children: [
@@ -266,4 +271,21 @@ class _AllInteractionsState extends State<AllInteractions> {
       },
     );
   }
+
+  Future<void> fetchMesssagerDetails(data) async {
+    print(data);
+    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+    var userDocument = await usersCollection.doc(data).get();
+    if (userDocument.exists) {
+      setState(() {
+        currentMessageFirstName= userDocument['firstName'] ?? '';
+        currentMessageProfileImageUrl = userDocument['profileImageUrl'] ?? '';
+
+      });
+    } else {
+      String message = "user details not found";
+      showAlert(context, message);
+    }
+  }
+
 }

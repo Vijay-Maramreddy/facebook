@@ -29,6 +29,7 @@ class _ChatPageState extends State<ChatPage> {
   List<List<String>> groupsInfo = [];
   late bool isGroup = false;
   String clickedGroupId = "";
+  List<String> selectedGroupDocument = [];
 
   @override
   void initState() {
@@ -199,9 +200,6 @@ class _ChatPageState extends State<ChatPage> {
                                             ),
                                           ),
                                         );
-                                        // const SizedBox(
-                                        //   height: 10,
-                                        // )
                                       },
                                     );
                                   }
@@ -229,7 +227,7 @@ class _ChatPageState extends State<ChatPage> {
                                       ),
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.add),
+                                      icon: const Icon(Icons.add),
                                       onPressed: () {
                                         setState(() {
                                           showDialog(
@@ -252,52 +250,57 @@ class _ChatPageState extends State<ChatPage> {
                                   String profileImageUrl = groupData[1];
                                   String groupId = groupData[2];
 
-                                  return ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        clickedGroupId=groupId;
-                                        isGroup = true;
-                                      });
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.all(10),
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.black),
-                                        borderRadius: BorderRadius.circular(10),
-                                        color: Colors.blue,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 30,
-                                            height: 30,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Colors.blue,
-                                              border: Border.all(
-                                                color: Colors.white,
-                                                width: 0.1,
+                                  return Padding(
+                                    
+                                    padding: EdgeInsets.all(10),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          clickedGroupId = groupId;
+                                          isGroup = true;
+                                          selectedGroupDocument = groupData; // Update selectedGroupDocument
+                                        });
+                                      },
+                                      child: Container(
+                                        margin: const EdgeInsets.all(10),
+                                        // padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          // border: Border.all(color: Colors.black),
+                                          borderRadius: BorderRadius.circular(10),
+                                          color: Colors.blue,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 30,
+                                              height: 30,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Colors.blue,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 0.1,
+                                                ),
+                                              ),
+                                              child: ClipOval(
+                                                child: Image.network(
+                                                  profileImageUrl,
+                                                  width: 30,
+                                                  height: 30,
+                                                  fit: BoxFit.cover,
+                                                ),
                                               ),
                                             ),
-                                            child: ClipOval(
-                                              child: Image.network(
-                                                profileImageUrl,
-                                                width: 30,
-                                                height: 30,
-                                                fit: BoxFit.cover,
+                                            const SizedBox(width: 20),
+                                            Align(
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                name,
+                                                style: const TextStyle(fontSize: 26),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 20),
-                                          Align(
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              name,
-                                              style: const TextStyle(fontSize: 26),
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
@@ -334,6 +337,7 @@ class _ChatPageState extends State<ChatPage> {
                   width: 1100,
                   child: GroupChatWidget(
                     clickedGroupId: clickedGroupId,
+                    selectedGroupDocument: selectedGroupDocument,
                   ),
                 ),
               ),
@@ -347,11 +351,9 @@ class _ChatPageState extends State<ChatPage> {
   currentUserIsFriend(String? selectedDocumentId) {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-
     if (currentUserId == selectedDocumentId) {
       return false;
     }
-
     return true;
   }
 
@@ -385,10 +387,8 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> deletedMessageCount(String interactedBy, String interactedTo) async {
     CollectionReference<Map<String, dynamic>> messageCount = FirebaseFirestore.instance.collection('messageCount');
-
     QuerySnapshot<Object?> querySnapshot =
         await messageCount.where('interactedBy', isEqualTo: interactedTo).where('interactedTo', isEqualTo: interactedBy).get();
-
     for (QueryDocumentSnapshot<Object?> doc in querySnapshot.docs) {
       // Update the 'count' field to 0
       await messageCount.doc(doc.id).update({
@@ -432,19 +432,15 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> getAllGroupInfo(List<String> groupUids) async {
     for (var group in groupUids) {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(group).get();
-
       if (documentSnapshot.exists) {
         Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
         String name = data['groupName'];
         String profileImageUrl = data['groupProfileImageUrl'];
         String groupId = data['groupId'];
-
-        // Add the extracted data to a list
         List<String> groupData = [name, profileImageUrl, groupId];
         setState(() {
           groupsInfo.add(groupData);
         });
-        print("the groups info is $groupsInfo");
       } else {
         print('Document for group $group not found.');
       }
