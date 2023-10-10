@@ -55,7 +55,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     loadUserDetails();
     updateEditable();
     blocked();
-    print('hi');
     super.initState();
   }
 
@@ -94,12 +93,10 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   }
 
   Future<String> uploadImageToStorage(String childName, Uint8List file) async {
-    print("inside upload image to storage");
     Reference ref = _storage.ref().child(childName);
     UploadTask uploadTask = ref.putData(file);
     TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await snapshot.ref.getDownloadURL();
-    print("end of upload image to storage");
     return downloadUrl;
   }
 
@@ -111,15 +108,11 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   }
 
   void loadUserDetails() async {
-    print("loading user detials");
     print(widget.userId);
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-    print(widget.userId);
-    // Query the collection to find the document with the provided UID
     var userDocument = await usersCollection.doc(widget.userId).get();
     if (userDocument.exists) {
       setState(() {
-        print("inside set state of loaduserdetails ");
         _firstNameController.text = userDocument['firstName'] ?? '';
         _lastNameController.text = userDocument['lastName'] ?? '';
         _emailController.text = userDocument['email'] ?? '';
@@ -442,7 +435,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   }
 
   cancelRequest() async {
-    print("inside cancel request");
+
     User? user = auth.currentUser;
     requestedBy = user!.uid;
     requestedTo = widget.userId!;
@@ -460,7 +453,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   }
 
   removeFriend() async {
-    print("inside cancel request");
     User? user = auth.currentUser;
     requestedBy = user!.uid;
     requestedTo = widget.userId!;
@@ -511,7 +503,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   }
 
   Future<void> loadFriendsStatus() async {
-    print('inside LFR');
     User? user = auth.currentUser;
     requestedBy = user!.uid;
     requestedTo = widget.userId!;
@@ -521,7 +512,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     QuerySnapshot querySnapshot = await friendRequests.where('requestId', isEqualTo: requestId).where('requestedBy', isEqualTo: requestedBy).get();
 
     if (querySnapshot.docs.isNotEmpty) {
-      print('querySnapshot is not empty');
 
       querySnapshot.docs.forEach((doc) {
         friendStatus = doc['friendStatus'];
@@ -536,9 +526,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
       if (friends != null && friends.contains(requestedBy)) {
         friendStatus = true;
-        // requestStatus=true;
-        print("friend status is $friendStatus");
-        // print("friend status is $requestStatus");
       }
     }
   }
@@ -573,6 +560,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     String? currentUserId = user?.uid;
     DocumentReference documentReference =
     FirebaseFirestore.instance.collection('users').doc(currentUserId);
+
 
     try {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot =

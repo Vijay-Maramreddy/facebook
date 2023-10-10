@@ -21,6 +21,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: "FaceBook",
       home: Scaffold(
         body: Center(
           child: Column(

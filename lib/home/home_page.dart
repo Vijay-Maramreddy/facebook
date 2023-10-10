@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> allNames = [];
   List<String> filteredNames = [];
   late String currentUserId;
-  late int newMessagesCount=0;
+  late int newMessagesCount = 0;
 
   void onSearchTextChanged(String searchText) {
     filteredNames.clear();
@@ -71,290 +71,312 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.lightBlueAccent,
-      body: Column(
-        // mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.person),
-                color: Colors.white,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ShowUserDetailsPage(
-                            userId: currentUserId,
-                          ),
+    return MaterialApp(title: "FaceBook ($newMessagesCount)",
+      home: Scaffold(
+        backgroundColor: Colors.lightBlueAccent,
+        body: Column(
+          // mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.person),
+                  color: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShowUserDetailsPage(
+                          userId: currentUserId,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.mobile_friendly_rounded),
+                  color: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FriendRequestPage(),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  icon: const Icon(Icons.video_collection_outlined),
+                  color: Colors.white, // Customize the color as needed
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ReelsPage()));
+                    // Add your left-end icon onPressed functionality here.
+                  },
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                      icon: const Icon(Icons.chat),
+                      color: Colors.white, // Customize the color as needed
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage()));
+                        // Add your left-end icon onPressed functionality here.
+                      },
                     ),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.mobile_friendly_rounded),
-                color: Colors.white,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FriendRequestPage(),
-                    ),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.chat),
-                color: Colors.white, // Customize the color as needed
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage()));
-                  // Add your left-end icon onPressed functionality here.
-                },
-              ),
-              Text("$newMessagesCount", style: TextStyle(color: Colors.red)),
-              IconButton(
-                icon: const Icon(Icons.video_collection_outlined),
-                color: Colors.white, // Customize the color as needed
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ReelsPage()));
-                  // Add your left-end icon onPressed functionality here.
-                },
-              ),
-            ],
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Center(
-              child: Row(
-                // mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Center(
-                    child: Container(
-                      decoration: customBoxDecoration,
-                      margin: const EdgeInsets.all(10),
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                      child: Column(
-                        children: [
-                          Stack(children: <Widget>[
-                            Container(
-                              width: 400,
-                              height: 620,
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: Colors.white,
-                              ),
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.vertical,
-                                child: Column(
-                                  children: [
-                                    TextField(
-                                      onChanged: onSearchTextChanged,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Search',
-                                        border: InputBorder.none,
-                                        prefixIcon: Icon(Icons.search),
+                    if(newMessagesCount>0)
+                    Text("$newMessagesCount", style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ],
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Center(
+                child: Row(
+                  // mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Center(
+                      child: Container(
+                        decoration: customBoxDecoration,
+                        margin: const EdgeInsets.all(10),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                        child: Column(
+                          children: [
+                            Stack(children: <Widget>[
+                              Container(
+                                width: 400,
+                                height: 620,
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  color: Colors.white,
+                                ),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.vertical,
+                                  child: Column(
+                                    children: [
+                                      TextField(
+                                        onChanged: onSearchTextChanged,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Search',
+                                          border: InputBorder.none,
+                                          prefixIcon: Icon(Icons.search),
+                                        ),
                                       ),
-                                    ),
-                                    if (filteredNames.isNotEmpty)
-                                      SizedBox(
-                                          height: 150, // Set a fixed height or adjust as needed
-                                          child: ListView.builder(
-                                            itemCount: filteredNames.length,
-                                            itemBuilder: (context, index) {
-                                              return FutureBuilder<DocumentSnapshot?>(
-                                                future: fetchData(filteredNames[index]),
-                                                builder: (context, snapshot) {
-                                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                                    return CircularProgressIndicator(); // or a loading indicator
-                                                  } else if (snapshot.hasError) {
-                                                    return Text('Error: ${snapshot.error}');
-                                                  } else if (!snapshot.hasData || snapshot.data == null) {
-                                                    return Text('No user found with the specified first name.');
-                                                  } else {
-                                                    DocumentSnapshot userDocument = snapshot.data!;
-                                                    FirebaseAuth auth = FirebaseAuth.instance;
-                                                    User? user = auth.currentUser;
-                                                    if (userDocument.id == user?.uid) return Container();
-                                                    return Container(
-                                                      height: 40,
-                                                      child: GestureDetector(
-                                                        onTap: () {
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (context) =>
-                                                                  ShowUserDetailsPage(
-                                                                    userId: userDocument.id,
+                                      if (filteredNames.isNotEmpty)
+                                        SizedBox(
+                                            height: 150, // Set a fixed height or adjust as needed
+                                            child: ListView.builder(
+                                              itemCount: filteredNames.length,
+                                              itemBuilder: (context, index) {
+                                                return FutureBuilder<DocumentSnapshot?>(
+                                                  future: fetchData(filteredNames[index]),
+                                                  builder: (context, snapshot) {
+                                                    if (snapshot.connectionState == ConnectionState.waiting) {
+                                                      return CircularProgressIndicator(); // or a loading indicator
+                                                    } else if (snapshot.hasError) {
+                                                      return Text('Error: ${snapshot.error}');
+                                                    } else if (!snapshot.hasData || snapshot.data == null) {
+                                                      return Text('No user found with the specified first name.');
+                                                    } else {
+                                                      DocumentSnapshot userDocument = snapshot.data!;
+                                                      FirebaseAuth auth = FirebaseAuth.instance;
+                                                      User? user = auth.currentUser;
+                                                      if (userDocument.id == user?.uid) return Container();
+                                                      return Container(
+                                                        height: 40,
+                                                        child: GestureDetector(
+                                                          onTap: () {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder: (context) => ShowUserDetailsPage(
+                                                                  userId: userDocument.id,
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: Row(
+                                                            children: [
+                                                              Container(
+                                                                width: 30,
+                                                                height: 30,
+                                                                decoration: BoxDecoration(
+                                                                  shape: BoxShape.circle,
+                                                                  border: Border.all(
+                                                                    color: Colors.blue,
+                                                                    width: 0.1,
                                                                   ),
-                                                            ),
-                                                          );
-                                                        },
-                                                        child: Row(
-                                                          children: [
-                                                            Container(
-                                                              width: 30,
-                                                              height: 30,
-                                                              decoration: BoxDecoration(
-                                                                shape: BoxShape.circle,
-                                                                border: Border.all(
-                                                                  color: Colors.blue,
-                                                                  width: 0.1,
+                                                                ),
+                                                                child: ClipOval(
+                                                                  child: Image.network(
+                                                                    userDocument['profileImageUrl'],
+                                                                    width: 30,
+                                                                    height: 30,
+                                                                    fit: BoxFit.cover,
+                                                                  ),
                                                                 ),
                                                               ),
-                                                              child: ClipOval(
-                                                                child: Image.network(
-                                                                  userDocument['profileImageUrl'],
-                                                                  width: 30,
-                                                                  height: 30,
-                                                                  fit: BoxFit.cover,
-                                                                ),
+                                                              Text(
+                                                                userDocument['firstName'],
+                                                                style: const TextStyle(fontSize: 20),
                                                               ),
-                                                            ),
-                                                            Text(
-                                                              userDocument['firstName'],
-                                                              style: const TextStyle(fontSize: 20),
-                                                            ),
-                                                          ],
+                                                            ],
+                                                          ),
                                                         ),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                              );
-                                            },
-                                          )),
-                                    SizedBox(
-                                      width: 400,
-                                      child: Container(
-                                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                                          child: TextButton(
-                                              onPressed: uploadImageAndSaveUrl,
-                                              child: const Text(
-                                                "upload post",
-                                                style: TextStyle(color: Colors.white, fontSize: 36),
-                                              ))),
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 400,
-                                      child: Container(
-                                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                                          child: TextButton(
-                                              onPressed: () {
-                                                uploadAStatus();
-                                              },
-                                              child: const Text(
-                                                "Post a Status",
-                                                style: TextStyle(color: Colors.white, fontSize: 36),
-                                              ))),
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 400,
-                                      child: Container(
-                                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                                          child: TextButton(
-                                              onPressed: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        ShowUserDetailsPage(
-                                                          userId: currentUserId,
-                                                        ),
-                                                  ),
+                                                      );
+                                                    }
+                                                  },
                                                 );
                                               },
-                                              child: const Text(
-                                                "User Profile",
-                                                style: TextStyle(color: Colors.white, fontSize: 36),
-                                              ))),
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 400,
-                                      child: Container(
-                                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                                          child: TextButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  showOnlyCurrentUserPosts = true;
-                                                });
-                                              },
-                                              child: const Text(
-                                                "Your Posts",
-                                                style: TextStyle(color: Colors.white, fontSize: 36),
-                                              ))),
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 400,
-                                      child: Container(
-                                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                                          child: TextButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  showOnlyCurrentUserPosts = false;
-                                                });
-                                              },
-                                              child: const Text(
-                                                "All Posts",
-                                                style: TextStyle(color: Colors.white, fontSize: 36),
-                                              ))),
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 400,
-                                      child: Container(
-                                          decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
-                                          child: TextButton(
-                                              onPressed: () => _signOut(context),
-                                              child: const Text(
-                                                "Log Out",
-                                                style: TextStyle(color: Colors.white, fontSize: 36),
-                                              ))),
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                  ],
+                                            )),
+                                      SizedBox(
+                                        width: 400,
+                                        child: Container(
+                                            decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                                            child: TextButton(
+                                                onPressed: uploadImageAndSaveUrl,
+                                                child: const Text(
+                                                  "upload post",
+                                                  style: TextStyle(color: Colors.white, fontSize: 36),
+                                                ))),
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      SizedBox(
+                                        width: 400,
+                                        child: Container(
+                                            decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                                            child: TextButton(
+                                                onPressed: () {
+                                                  uploadAStatus();
+                                                },
+                                                child: const Text(
+                                                  "Post a Status",
+                                                  style: TextStyle(color: Colors.white, fontSize: 36),
+                                                ))),
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      SizedBox(
+                                        width: 400,
+                                        child: Container(
+                                            decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                                            child: TextButton(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) => ShowUserDetailsPage(
+                                                        userId: currentUserId,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                child: const Text(
+                                                  "User Profile",
+                                                  style: TextStyle(color: Colors.white, fontSize: 36),
+                                                ))),
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      SizedBox(
+                                        width: 400,
+                                        child: Container(
+                                            decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                                            child: TextButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showOnlyCurrentUserPosts = true;
+                                                  });
+                                                },
+                                                child: const Text(
+                                                  "Your Posts",
+                                                  style: TextStyle(color: Colors.white, fontSize: 36),
+                                                ))),
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      SizedBox(
+                                        width: 400,
+                                        child: Container(
+                                            decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                                            child: TextButton(
+                                                onPressed: () {
+                                                  setState(() {
+                                                    showOnlyCurrentUserPosts = false;
+                                                  });
+                                                },
+                                                child: const Text(
+                                                  "All Posts",
+                                                  style: TextStyle(color: Colors.white, fontSize: 36),
+                                                ))),
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      SizedBox(
+                                        width: 400,
+                                        child: Container(
+                                            decoration: const BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)), color: Colors.blue),
+                                            child: TextButton(
+                                                onPressed: () => _signOut(context),
+                                                child: const Text(
+                                                  "Log Out",
+                                                  style: TextStyle(color: Colors.white, fontSize: 36),
+                                                ))),
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ]),
-                        ],
+                            ]),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Column(children: [
-                    Center(
-                      child: Container(color: Colors.white,
-                          child: StatusCollectionWidget(
-                              showOnlyCurrentUserPosts: showOnlyCurrentUserPosts, onUploadStatus: uploadAStatus, friendsIds: friendsIds)),
-                    ),
-                    Center(
-                      child: Container(color: Colors.white, child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)),
-                    ),
-                  ]),
-                ],
+                    Column(children: [
+                      Center(
+                        child: Container(
+                            margin: const EdgeInsets.all(10.0),
+                            padding: const EdgeInsets.all(10.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            child: StatusCollectionWidget(
+                                showOnlyCurrentUserPosts: showOnlyCurrentUserPosts, onUploadStatus: uploadAStatus, friendsIds: friendsIds)),
+                      ),
+                      Center(
+                        child: Container(
+                            margin: const EdgeInsets.all(10.0),
+                            padding: const EdgeInsets.all(10.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            child: ImageCollectionWidget(showOnlyCurrentUserPosts: showOnlyCurrentUserPosts)),
+                      ),
+                    ]),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -379,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, int commentsCount, String dateTime,
-      List<String> likedBy, String profileImageUrl, String firstName, bool status) async {
+      List<String> likedBy, String profileImageUrl, String firstName, bool status,int shareCount) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
@@ -394,6 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'profileImageUrl': profileImageUrl,
       'firstName': firstName,
       'status': status,
+      'sharesCount':shareCount,
     });
   }
 
@@ -412,6 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
+      int shareCount=0;
       if (imageUrl != null) {
         // Use the Firebase auth user's UID as the user ID
         CollectionReference usersCollection = await FirebaseFirestore.instance.collection('users');
@@ -432,17 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
             String message = "user details not found";
             showAlert(context, message);
           }
-          await addImageUrlToFirebase(
-              user.uid,
-              imageUrl,
-              title!,
-              likes,
-              commentsCount,
-              dateTime,
-              likedBy,
-              profileImageUrl,
-              firstName,
-              status);
+          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status,shareCount);
           setState(() {});
         } else {
           print('Error: User is not authenticated.');
@@ -528,7 +542,6 @@ class _HomeScreenState extends State<HomeScreen> {
     DocumentSnapshot? userDocument = await getDocumentByFirstName(firstName);
 
     if (userDocument != null) {
-      // Document found, print the data
       print('User found');
     } else {
       print('No user found with the specified first name.');
@@ -560,12 +573,10 @@ class _HomeScreenState extends State<HomeScreen> {
     String? currentUserId = user?.uid;
     List<String> friendsId = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['friends']?.cast<String>() ?? [];
     if (friendsId != null) {
-      friendsIds = List.from(friendsId)
-        ..add(currentUserId!);
+      friendsIds = List.from(friendsId)..add(currentUserId!);
     } else {
       friendsIds = [currentUserId!];
     }
-    print(friendsIds);
   }
 
   Future<void> fetchNewMessageCount() async {
@@ -578,8 +589,9 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           newMessagesCount += document.data()['count']! as int;
         });
-
       }
     }
   }
+
+
 }

@@ -21,6 +21,17 @@ class ImageCollectionWidget extends StatefulWidget {
 class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   late String profileImageUrl = '';
   late String firstName = '';
+  List<String> userIdList = [];
+  Map<String, List<String>> userDataMap = {};
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    getDetails(currentUserId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +61,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
           }
           return Container(
             width: 800,
-            height: 400,
+            height: 380,
             child: ListView.builder(
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
@@ -85,6 +96,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                           commentsCount: document['commentsCount'],
                           dateTime: formattedTime,
                           status: document['status'],
+                          sharesCount: document['sharesCount'],
                         ),
                         documentsId: documentId,
                         postProfileImageUrl: profileImageUrl,
@@ -111,6 +123,8 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     if (document.userId == currentUserId) {
       currentUserIsViewingUser = true;
     }
+    int sharesCount=document.sharesCount as int;
+    print(sharesCount);
     return Visibility(
       visible: isVisible(document.userId),
       child: Container(
@@ -244,19 +258,61 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                     Text('Comments: ${document.commentsCount}'),
                   ],
                 ),
-                // IconButton(
-                //   icon: Icon(Icons.emoji_emotions), // Emoji icon
-                //   onPressed: () {
-                //     openEmojiPicker(context); // Open the emoji picker modal bottom sheet
-                //   },
-                // ),
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.share),
-                      onPressed: () {},
+                      icon: const Icon(Icons.share, color: Colors.black),
+                      onPressed: () {
+                        updateSharesCount(documentsId,document);
+
+                        final linkToShare = Uri.encodeComponent(document.imageUrl);
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (context) {
+                            return Container(
+                              child: Wrap(
+                                children: <Widget>[
+                                  ListTile(
+                                    leading: const Icon(Icons.send),
+                                    title: const Text('Share on WhatsApp'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      shareOnWhatsApp(linkToShare);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.send),
+                                    title: const Text('Share on Facebook'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      shareOnFacebook(linkToShare);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.send),
+                                    title: const Text('Share on Telegram'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      shareOnTelegram(linkToShare);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.send),
+                                    title: const Text('Share with friends'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _showDialog(context, document.imageUrl);
+                                      // shareToFriends(linkToShare);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
-                    Text('Shares: ${document.sharesCount}'),
+                    Text('$sharesCount',style: TextStyle(color: Colors.black)),
                   ],
                 ),
               ],
@@ -340,56 +396,124 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     }
   }
 
-  // void openEmojiPicker(BuildContext context) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     builder: (BuildContext context) {
-  //       return Column(
-  //         children: [
-  //           SizedBox(
-  //             width: 500,
-  //             height: 100,
-  //             child: Row(
-  //               children: [
-  //                 Container(
-  //                   width: 300,
-  //                   height: 100,
-  //                   child: TextField(
-  //                     controller: _messageController,
-  //                     decoration: const InputDecoration(
-  //                       hintText: 'Message....',
-  //                     ),
-  //                     onSubmitted: (String text) {
-  //                       sendMessageOrIcon();
-  //                       Navigator.pop(context);// Call your sendIcon function when the user submits the text (e.g., by pressing Enter)
-  //                     },
-  //                   ),
-  //                 ),
-  //                 const SizedBox(width: 10),
-  //                 IconButton(
-  //                   icon: const Icon(Icons.send),
-  //                   onPressed: () {
-  //                     sendMessageOrIcon();
-  //                     Navigator.pop(context);
-  //                   },
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //           Expanded(
-  //             child: EmojiPicker(
-  //               onEmojiSelected: (category, emoji) {
-  //                 setState(() {
-  //                   _messageController.text += emoji.emoji;
-  //                 });
-  //               },
-  //             ),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
+
+  Future<void> _showDialog(BuildContext context, String linkToShare) {
+    late List<String> userIds = [];
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Users'),
+          content: SingleChildScrollView(
+              child: Column(
+                children: userDataMap.keys.map((userId) {
+                  String firstName = userDataMap[userId]![0];
+                  bool isChecked = userIds.contains(userId);
+
+                  return ListTile(
+                    title: Text(firstName),
+                    leading: Checkbox(
+                      value: isChecked,
+                      onChanged: (bool? newvalue) {
+                        print(userIds);
+                        print(userId);
+                        print('Checkbox value: $newvalue');
+                        setState(() {
+                          if (newvalue != null) {
+                            if (newvalue) {
+                              userIds.add(userId);
+                            } else {
+                              userIds.remove(userId);
+                            }
+                          }
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              )),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                shareLinkToAllFriends(userIds, linkToShare);
+                Navigator.of(context).pop(userIds);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void shareLinkToAllFriends(List<String> userIds, String linkToShare) {
+    for (String userId in userIds) {
+      sendPostImageUrl(userId, linkToShare);
+    }
+  }
+
+  void sendPostImageUrl(String userId,String imageLink) async {
+    int count;
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+
+    CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: userId)
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+    DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+    count = doc['count'];
+    count = count + 1;
+    await doc.reference.update({'count': count});
+    // await doc.reference.update({'count': currentCount + 1});
+
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String? videoLink = '';
+    String text ="Check Out This Post";
+    String groupId = combineIds(currentUserId, userId);
+    if (text.isNotEmpty) {
+      await interactionsCollection.add({
+        'interactedBy': currentUserId,
+        'interactedWith': userId,
+        'imageUrl': imageLink,
+        'dateTime': formattedDateTime,
+        'message': text,
+        'groupId': groupId,
+        'videoUrl': "",
+        'visibility': true,
+      });
+    }
+  }
+
+  Future<void> getDetails(String? currentUserId) async {
+    userIdList = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['friends']?.cast<String>() ?? [];
+
+    for (String userId in userIdList) {
+      DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+      if (userSnapshot.exists) {
+        Map<String, dynamic> userData = userSnapshot.data()!;
+        String firstName = userData['firstName'];
+        String profileImageUrl = userData['profileImageUrl'];
+        userDataMap[userId] = [firstName, profileImageUrl];
+      }
+    }
+  }
+
+  Future<void> updateSharesCount(String documentsId, ImageDocument document) async {
+    int shareCount=document.sharesCount;
+    print('before increment $document.sharesCount');
+    shareCount++;
+    print("after increment $shareCount");
+    await FirebaseFirestore.instance.collection('images').doc(documentsId).update({
+      "sharesCount":shareCount,
+    });
+  }
 }
 
 

@@ -28,21 +28,15 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   @override
   void initState() {
     // TODO: implement initState
-    friendsIds=widget.friendsIds;
+    friendsIds = widget.friendsIds;
     super.initState();
-    print(friendsIds);
   }
 
   @override
   Widget build(BuildContext context) {
-
-          return SingleChildScrollView(
+    return SingleChildScrollView(
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('images')
-            .where('status', isEqualTo: true)
-            .orderBy('dateTime', descending: true)
-            .snapshots(),
+        stream: FirebaseFirestore.instance.collection('images').where('status', isEqualTo: true).orderBy('dateTime', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const CircularProgressIndicator();
@@ -54,22 +48,23 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
             return Container(
               padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
               width: 800,
-              height: 200,
+              height: 180,
               child: Column(
-                  children:[
-                    Text("no status available now, try creating your own Status"),
-                    IconButton(
-                        onPressed: (){
-                          onPressedUploadStatus();
-                      }, icon: Icon(Icons.add_a_photo))
-                  ],
+                children: [
+                  Text("no status available now, try creating your own Status"),
+                  IconButton(
+                      onPressed: () {
+                        onPressedUploadStatus();
+                      },
+                      icon: Icon(Icons.add_a_photo))
+                ],
               ),
             );
           }
           return Container(
             padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
             width: 800,
-            height: 200,
+            height: 180,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: snapshot.data!.docs.length,
@@ -92,8 +87,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                       if (difference.inHours >= 48) {
                         deletePost(documentId);
                         return Container();
-                      } else {
-                      }
+                      } else {}
                       String formattedTime = _formatTimeDifference(difference);
                       UserProfileDetails? userDetails = profileDetailsSnapshot.data;
                       String? profileImageUrl = userDetails?.profileImageUrl;
@@ -113,7 +107,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                         ),
                         documentsId: documentId,
                         postProfileImageUrl: profileImageUrl,
-                        postFirstName:firstName,
+                        postFirstName: firstName,
                       );
                     }
                   },
@@ -135,9 +129,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       currentUserIsViewingUser = true;
     }
     fetchUserDetails(userId: document.userId);
-    print(document.userId);
-    print(profileImageUrl);
-    print(firstName);
     return Visibility(
       visible: isVisible(document.userId),
       child: Column(
@@ -158,8 +149,8 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                 child: Row(
                   children: [
                     Container(
-                      width: 30, // Increased width
-                      height: 30, // Increased height
+                      width: 25, // Increased width
+                      height: 25, // Increased height
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -170,8 +161,8 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                       child: ClipOval(
                         child: Image.network(
                           postProfileImageUrl!,
-                          width: 30, // Increased width
-                          height: 30, // Increased height
+                          width: 25, // Increased width
+                          height: 25, // Increased height
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -183,7 +174,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                     const SizedBox(width: 8.0),
                     Text(
                       document.dateTime,
-                      style: const TextStyle(fontSize: 14.0),
+                      style: const TextStyle(fontSize: 13.0),
                     ),
                     Visibility(
                       visible: currentUserIsViewingUser,
@@ -241,7 +232,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-
                               Row(
                                 children: [
                                   IconButton(
@@ -333,7 +323,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     }
   }
 
-
   bool isVisible(String userId) {
     if (widget.showOnlyCurrentUserPosts == true) {
       User? user = FirebaseAuth.instance.currentUser;
@@ -342,21 +331,15 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
         return false;
       }
     }
-    if(friendsIds.isEmpty){
+    if (friendsIds.isEmpty) {
       return true;
     }
-    if(friendsIds.contains(userId))
-      {
-        return true;
-      }
-    else
-      {
-        print(friendsIds);
-        print(userId);
-        print("its false");
-        return false;
-      }
-     return true;
+    if (friendsIds.contains(userId)) {
+      return true;
+    } else {
+      return false;
+    }
+    return true;
   }
 
   isCountVisible(String userId) {
@@ -373,7 +356,6 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       // Access the collection and delete the document with the given ID
       await FirebaseFirestore.instance.collection('images').doc(documentId).delete();
       setState(() {});
-
     } catch (e) {
       print('Error deleting document: $e');
     }
@@ -391,17 +373,17 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       'likes': document.likes,
       'likedBy': document.likedBy,
     });
-    String groupId=combineIds(userId,document.userId);
+    String groupId = combineIds(userId, document.userId);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-    String message="liked the status";
+    String message = "liked the status";
     await interactionsCollection.add({
       'interactedBy': userId,
-      'interactedWith':document.userId,
-      'imageUrl':document.imageUrl,
-      'dateTime':formattedDateTime,
-      'message':message,
-      'groupId':groupId,
+      'interactedWith': document.userId,
+      'imageUrl': document.imageUrl,
+      'dateTime': formattedDateTime,
+      'message': message,
+      'groupId': groupId,
     });
   }
 
@@ -444,4 +426,3 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     }
   }
 }
-

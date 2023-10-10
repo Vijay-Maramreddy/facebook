@@ -27,7 +27,6 @@ class _ReelsPageState extends State<ReelsPage> {
 
   Future<XFile?> pickVideoFromGallery() async {
     XFile? videoFile = await ImagePicker().pickVideo(source: ImageSource.gallery);
-    print(videoFile);
     return videoFile;
   }
 
@@ -35,20 +34,17 @@ class _ReelsPageState extends State<ReelsPage> {
     String uuid = AppStyles.uuid();
     final bytes = await videoFile.readAsBytes();
     FirebaseStorage storage = FirebaseStorage.instance;
-    var videoFileName='${DateTime.now()}.mp4';
+    var videoFileName = '${DateTime.now()}.mp4';
     Reference child = storage.ref("Reelvideos").child(videoFileName);
 
     await child.putData(bytes);
     // TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await child.getDownloadURL();
-    print(downloadUrl);
-
     return downloadUrl;
   }
 
   Future<String?> _showVideoPickerDialog(String? videoUrl) async {
     if (videoUrl != null && videoUrl.isNotEmpty) {
-      print("inside video dialog box");
       var message = '';
 
       final VideoPlayerController _videoPlayerController = VideoPlayerController.network(videoUrl);
@@ -110,8 +106,6 @@ class _ReelsPageState extends State<ReelsPage> {
     }
   }
 
-
-
   Future<void> uploadVideoAndSaveUrl() async {
     _videoFile = await pickVideoFromGallery();
 
@@ -120,31 +114,27 @@ class _ReelsPageState extends State<ReelsPage> {
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? videoUrl = await uploadVideoToStorage('videos/' + uuid, _videoFile!);
-      print(videoUrl);
       String? message = await _showVideoPickerDialog(videoUrl);
 
-
-      final CollectionReference interactionsCollection =
-      FirebaseFirestore.instance.collection('reels');
+      final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('reels');
       User? user = FirebaseAuth.instance.currentUser;
       String? currentUserId = user?.uid;
       // String groupId = combineIds(currentUserId, widget.documentId);
       if (videoUrl != null) {
         await interactionsCollection.add({
-          'createdBy':currentUserId,
+          'createdBy': currentUserId,
           'videoUrl': videoUrl,
           'dateTime': dateTime,
           'message': message,
-          'likes':0,
-          'likedBy':[],
+          'likes': 0,
+          'likedBy': [],
+          'shareCount':0,
         });
       }
     } else {
       print('No video picked.');
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -154,22 +144,43 @@ class _ReelsPageState extends State<ReelsPage> {
           backgroundColor: Colors.blue,
           title: Text("Reels Page"),
         ),
-        body: Column(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.video_collection_outlined),
-              color: Colors.black, // Customize the color as needed
-              onPressed: () {
-                uploadVideoAndSaveUrl();
-              },
-            ),
-            SingleChildScrollView(
-              child:ReelsCollectionWidget() ,
-            )
-          ],
+        body: Container(
+          alignment: Alignment.center,
+          margin: const EdgeInsets.all(10.0),
+          padding: const EdgeInsets.all(10.0),
+          decoration: BoxDecoration(
+            color: Colors.lightBlueAccent,
+            border: Border.all(color: Colors.black),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: Column(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.video_collection_outlined),
+                color: Colors.black, // Customize the color as needed
+                onPressed: () {
+                  uploadVideoAndSaveUrl();
+                },
+              ),
+              Container(
+                alignment: Alignment.center,
+                margin: const EdgeInsets.all(10.0),
+                padding: const EdgeInsets.all(10.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                width: 525,
+                height: 545,
+                child: SingleChildScrollView(
+                  child: ReelsCollectionWidget(),
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

@@ -21,13 +21,12 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:html';
 // import 'dart:io';
 
-
 class ChatWidget extends StatefulWidget {
   final Map<String, dynamic>? documentData;
   final String? documentId;
   final String? groupId;
   final bool? isBlocked;
-  ChatWidget({super.key, this.documentData, this.documentId, this.groupId, required this.isBlocked});
+  const ChatWidget({super.key, this.documentData, this.documentId, this.groupId, required this.isBlocked});
 
   @override
   State<ChatWidget> createState() => _ChatWidgetState();
@@ -41,20 +40,15 @@ class _ChatWidgetState extends State<ChatWidget> {
   VideoPlayerController? _videoPlayerController;
 
   late int count;
-  late bool isBlocked=widget.isBlocked!;
+  late bool isBlocked = widget.isBlocked!;
+  List<String> oppositeBlocked=[];
 
-  // @override
-  // void initState() {
-  //   if(widget.documentData!=null) {
-  //     print("inside iiiiiiiiiiiii");
-  //     User? user = FirebaseAuth.instance.currentUser;
-  //     String? CurrentuserId = user?.uid;
-  //     String? interactedBy = CurrentuserId;
-  //     String? interactedTo = widget.documentId;
-  //     updateOrAddInteraction(interactedBy!, interactedTo!);
-  //     super.initState();
-  //   }
-  // }
+  @override
+  void initState() {
+    // TODO: implement initState
+    getOppositeBlockList();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +61,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         child: Container(
           width: 1000,
           height: 600,
-          child: Scaffold(
+          child: const Scaffold(
             body: Text("select a friend"),
           ),
         ),
@@ -77,7 +71,7 @@ class _ChatWidgetState extends State<ChatWidget> {
         scrollDirection: Axis.horizontal,
         child: Container(
           width: 1000,
-          height: 600,
+          height: 650,
           child: Scaffold(
             body: Container(
               child: Column(children: [
@@ -86,16 +80,22 @@ class _ChatWidgetState extends State<ChatWidget> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            ShowUserDetailsPage(
-                              userId: widget.documentId,
-                            ),
+                        builder: (context) => ShowUserDetailsPage(
+                          userId: widget.documentId,
+                        ),
                       ),
                     );
                   },
                   child: Container(
-                    color: Colors.blue,
-                    height: 40,
+                    margin: const EdgeInsets.all(10.0),
+                    padding: const EdgeInsets.all(10.0),
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      border: Border.all(color: Colors.black),
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+
+                    height: 60,
                     // width: 1400,
                     child: Row(
                       children: [
@@ -118,6 +118,9 @@ class _ChatWidgetState extends State<ChatWidget> {
                             ),
                           ),
                         ),
+                        SizedBox(
+                          width: 20,
+                        ),
                         Text(
                           widget.documentData!['firstName'] ?? '',
                           style: TextStyle(fontSize: 20),
@@ -126,95 +129,76 @@ class _ChatWidgetState extends State<ChatWidget> {
                     ),
                   ),
                 ),
-                Visibility(
-                  visible: !isBlocked!,
-                  child: Column(
-                    children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.vertical, // Change to vertical scroll
-                        child: Container(
-                          height: 500,
-                          child: Center(
-                            child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId, groupId: widget.groupId),
-                          ),
+                Column(
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.vertical, // Change to vertical scroll
+                      child: Container(
+                        height: 500,
+                        child: Center(
+                          child: AllInteractions(interactedBy: CurrentuserId, interactedWith: widget.documentId, groupId: widget.groupId,oppositeBlocked:oppositeBlocked,youBlocked:isBlocked),
                         ),
                       ),
-                      Row(children: [
-                        Container(
-                          decoration: customBoxDecoration,
-                          margin: const EdgeInsets.all(10),
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                          width: 850,
-                          height: 40,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  child: TextField(
-                                    controller: _messageController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Enter a message',
-                                      border: InputBorder.none,
-                                    ),
+                    ),
+                    Row(children: [
+                      Container(
+                        decoration: customBoxDecoration,
+                        margin: const EdgeInsets.all(10),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                        width: 850,
+                        height: 45,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                child: TextField(
+                                  controller: _messageController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter a message',
+                                    border: InputBorder.none,
                                   ),
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(Icons.emoji_emotions), // Emoji icon
-                                onPressed: () {
-                                  openEmojiPicker(context); // Open the emoji picker modal bottom sheet
-                                },
-                              ),
-                              IconButton(
-                                onPressed: uploadImageAndSaveUrl,
-                                icon: Icon(Icons.add_a_photo),
-                              ),
-                              IconButton(onPressed: () async {
+                            ),
+                            IconButton(
+                              padding: EdgeInsets.fromLTRB(0, 0, 0, 5),
+                              icon: Icon(Icons.emoji_emotions), // Emoji icon
+                              onPressed: () {
+                                openEmojiPicker(context); // Open the emoji picker modal bottom sheet
+                              },
+                            ),
+                            IconButton(
+                              padding: EdgeInsets.fromLTRB(0, 0, 0, 6),
+                              onPressed: uploadImageAndSaveUrl,
+                              icon: Icon(Icons.add_a_photo),
+                            ),
+                            IconButton(
+                              padding: EdgeInsets.fromLTRB(0, 0, 0, 5),
+                              onPressed: () async {
                                 print("Button is pressed");
                                 await uploadVideoAndSaveUrl();
                               },
-                                icon: Icon(Icons.video_library),
-                              )
-                            ],
-                          ),
+                              icon: Icon(Icons.video_library),
+                            )
+                          ],
                         ),
-                        IconButton(
-                            onPressed: (){
-                              sendMessageOrIcon();
-                            },
-
-                            icon: Icon(Icons.send)),
-                        IconButton(
-                          onPressed: () async {
-                            print("button is pressed");
-                            await sendMessageWithLocation();
+                      ),
+                      IconButton(
+                          onPressed: () {
+                            sendMessageOrIcon();
                           },
-                          icon: Icon(Icons.map),
-                        ),
-                      ])
-                    ],
-                  ),
+                          icon: Icon(Icons.send)),
+                      IconButton(
+                        onPressed: () async {
+                          print("button is pressed");
+                          await sendMessageWithLocation();
+                        },
+                        icon: Icon(Icons.map),
+                      ),
+                    ])
+                  ],
                 ),
-                Visibility(
-                    visible: isBlocked!,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text("You have blocked this User, please Unblock to interact to the User"),
-                        IconButton(
-                            onPressed:(){
-                              removeFromBlocked();
-                              setState(() {
-
-                              });
-                            },
-                            icon: Icon(Icons.block),
-                        )
-                      ],
-                    )
-                )
               ]),
             ),
           ),
@@ -253,6 +237,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           'message': message,
           'groupId': groupId,
           'videoUrl': '',
+          'visibility':!isBlocked,
         });
       }
     } else {
@@ -309,7 +294,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 
-
   Future<void> sendMessageWithLocation() async {
     String? locationMessage = await _getUserLocation();
     print("$locationMessage");
@@ -351,6 +335,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       'message': message,
       'groupId': groupId,
       'videoUrl': '',
+      'visibility':!isBlocked,
     });
     // Clear the text field after sending the message
     _messageController.clear();
@@ -437,9 +422,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       print(videoUrl);
       String? message = await _showVideoPickerDialog(videoUrl);
 
-
-      final CollectionReference interactionsCollection =
-      FirebaseFirestore.instance.collection('interactions');
+      final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
       String? currentUserId = user?.uid;
       String groupId = combineIds(currentUserId, widget.documentId);
@@ -452,6 +435,7 @@ class _ChatWidgetState extends State<ChatWidget> {
           'dateTime': dateTime,
           'message': message,
           'groupId': groupId,
+          'visibility':!isBlocked,
         });
       }
     } else {
@@ -459,12 +443,11 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 
-
   Future<String?> uploadVideoToStorage(String childName, XFile videoFile) async {
     String uuid = AppStyles.uuid();
     final bytes = await videoFile.readAsBytes();
     FirebaseStorage storage = FirebaseStorage.instance;
-    var videoFileName=const Uuid().v4();
+    var videoFileName = const Uuid().v4();
     Reference child = storage.ref("messagevideos").child(videoFileName);
 
     await child.putData(bytes);
@@ -496,7 +479,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                       ),
                       onSubmitted: (String text) {
                         sendMessageOrIcon();
-                        Navigator.pop(context);// Call your sendIcon function when the user submits the text (e.g., by pressing Enter)
+                        Navigator.pop(context); // Call your sendIcon function when the user submits the text (e.g., by pressing Enter)
                       },
                     ),
                   ),
@@ -526,70 +509,57 @@ class _ChatWidgetState extends State<ChatWidget> {
     );
   }
 
-  void sendMessageOrIcon() async{
+  void sendMessageOrIcon() async {
     User? user = FirebaseAuth.instance.currentUser;
     String? CurrentuserId = user?.uid;
 
     CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
 
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
-        .where('interactedBy', isEqualTo:CurrentuserId)
+        .where('interactedBy', isEqualTo: CurrentuserId)
         .where('interactedTo', isEqualTo: widget.documentId)
         .get() as QuerySnapshot<Map<String, dynamic>>;
-      DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
-      count= doc['count'];
-      count=count+1;
+    DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+    count = doc['count'];
+    count = count + 1;
     await doc.reference.update({'count': count});
-      // await doc.reference.update({'count': currentCount + 1});
+    // await doc.reference.update({'count': currentCount + 1});
 
-      DateTime now = DateTime.now();
-      String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
-      final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-      String? imageUrl = '';
-      String text = _messageController.text;
-      String groupId = combineIds(CurrentuserId, widget.documentId);
-      if (text.isNotEmpty) {
-        await interactionsCollection.add({
-          'interactedBy': CurrentuserId,
-          'interactedWith': widget.documentId,
-          'imageUrl': imageUrl,
-          'dateTime': formattedDateTime,
-          'message': text,
-          'groupId': groupId,
-          'videoUrl':'',
-        });
-        _messageController.clear();
-        // setState(() {}); // Clear the text field after sending the message
-      }
-  }
-
-  Future<void> removeFromBlocked() async {
-    // Get the document reference
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
-    DocumentReference documentReference =
-    FirebaseFirestore.instance.collection('users').doc(currentUserId);
-
-    try {
-      DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-      await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
-      if (documentSnapshot.exists) {
-        List<String> blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
-        blockedList.remove(widget.documentId!);
-
-        // Update the document with the modified blocked list
-        await documentReference.update({'blocked': blockedList});
-        setState(() {
-          isBlocked=false;
-        });
-      } else {
-        print('Document with ID $currentUserId not found.');
-      }
-    } catch (e) {
-      print('Error adding to blocked list and updating document: $e');
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String? imageUrl = '';
+    String text = _messageController.text;
+    String groupId = combineIds(CurrentuserId, widget.documentId);
+    if (text.isNotEmpty) {
+      await interactionsCollection.add({
+        'interactedBy': CurrentuserId,
+        'interactedWith': widget.documentId,
+        'imageUrl': imageUrl,
+        'dateTime': formattedDateTime,
+        'message': text,
+        'groupId': groupId,
+        'videoUrl': '',
+        'visibility':!isBlocked,
+      });
+      _messageController.clear();
+      // setState(() {}); // Clear the text field after sending the message
     }
   }
 
 
+  Future<void> getOppositeBlockList() async {
+    // User? user = FirebaseAuth.instance.currentUser;
+    // String? currentUserId = user?.uid;
+    DocumentReference documentReference = FirebaseFirestore.instance.collection('users').doc(widget.documentId);
+    DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
+    if (documentSnapshot.data() != null) {
+      dynamic blockedData = documentSnapshot.data()!['blocked'];
+
+      if (blockedData != null && blockedData is List) {
+        oppositeBlocked = List<String>.from(blockedData);
+      }
+    }
+  }
 }

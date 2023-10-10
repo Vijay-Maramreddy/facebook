@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'app_style.dart';
 
@@ -150,5 +151,33 @@ Future<UserProfileDetails> getProfileDetails(String userId) async {
   } catch (e) {
     print('Error getting profile details: $e');
     return UserProfileDetails(profileImageUrl: null, firstName: null);
+  }
+}
+
+
+void shareOnWhatsApp(String link) async {
+  final url = 'https://api.whatsapp.com/send?text=Check%20out%20this%20reel:%20$link';
+  if (await canLaunch(url)) {
+    await launch(url);
+  } else {
+    throw 'Could not launch $url';
+  }
+}
+
+void shareOnFacebook(String link) async {
+  final url = 'https://www.facebook.com/sharer/sharer.php?u=Check%20out%20this%20reel:%20$link';
+  if (await canLaunch(url)) {
+    await launch(url);
+  } else {
+    throw 'Could not launch $url';
+  }
+}
+
+void shareOnTelegram(String link) async {
+  final url = 'https://t.me/share/url?url=Check%20out%20this%20reel:%20$link';
+  if (await canLaunch(url)) {
+    await launch(url);
+  } else {
+    throw 'Could not launch $url';
   }
 }

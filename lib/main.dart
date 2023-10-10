@@ -26,7 +26,7 @@ Future main() async {
   } else {
     await Firebase.initializeApp();
   }
-  runApp(MaterialApp(home: MyApp(),));
+  runApp(MaterialApp(title: 'FaceBook',home: MyApp(),));
 }
 
 class MyApp extends StatelessWidget {
