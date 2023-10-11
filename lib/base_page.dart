@@ -181,3 +181,4 @@ void shareOnTelegram(String link) async {
     throw 'Could not launch $url';
   }
 }
+

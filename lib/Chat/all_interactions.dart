@@ -32,16 +32,24 @@ class AllInteractions extends StatefulWidget {
 }
 
 class _AllInteractionsState extends State<AllInteractions> {
+  Map<String, List<String>> mapOfLists = {};
+  String firstName = "";
+  String profileImageUrl = "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
 
-  String currentMessageFirstName="";
-  String currentMessageProfileImageUrl="";
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    fetchMessengerDetails(widget.groupId);
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('interactions')
           .where('groupId', isEqualTo: widget.groupId)
-          .where('visibility',isEqualTo: true)// Adjust this condition as needed
+          .where('visibility', isEqualTo: true) // Adjust this condition as needed
           .orderBy('dateTime')
           .snapshots(),
       builder: (context, snapshot) {
@@ -54,190 +62,309 @@ class _AllInteractionsState extends State<AllInteractions> {
         } else {
           // Data is available, build your UI accordingly
           return ListView.builder(
-            // reverse: true,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-
               final messageText = data['message'];
-              dynamic urlString=data['videoUrl'];
-
+              dynamic urlString = data['videoUrl'];
+              String userUid = data['interactedBy'];
+              List<String>? userValues = mapOfLists[userUid];
+              if (userValues != null) {
+                firstName = userValues[0]; // First element is the first name
+                profileImageUrl = userValues[1]; // Second element is the profile image URL
+              } else {
+                print('No values found for the user with UID: $userUid');
+              }
+              // fetchMessengerDetails(data['interactedBy']);
               return Visibility(
-                visible: data['visibility'],
                 child: Column(
                   children: [
                     if (data['interactedBy'] == widget.interactedBy)
-                      if (urlString != "")
-                        Column(
-                            // mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (urlString != "")
+                            Column(children: [
                               Container(
-                                alignment: Alignment.topRight,
                                 width: 550,
                                 height: 330,
                                 padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                child: VideoContainer( alignment: 'right',videoUrl: urlString,),
+                                child: VideoContainer(
+                                  alignment: 'right',
+                                  videoUrl: urlString,
+                                ),
                               ),
                               Container(
-                                alignment: Alignment.centerRight,
                                 padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                                 child: Text(data['message']),
                               ),
                               Container(
-                                alignment: Alignment.centerRight,
                                 padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                                 child: Text(data['dateTime']),
                               ),
                             ])
-                      else if (data['imageUrl'] == "" && urlString == "")
-                        if (data['message']!.startsWith('https://'))
-                          Column(children: [
-                            MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: GestureDetector(
-                                onTap: () {
-                                  window.open(data['message']!, '_blank');
-                                },
-                                child: Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                  child: Text(
-                                    data['message'],
-                                    style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                          else if (data['imageUrl'] == "" && urlString == "")
+                            if (data['message']!.startsWith('https://'))
+                              Column(children: [
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      window.open(data['message']!, '_blank');
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                      child: Text(
+                                        data['message'],
+                                        style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                      ),
+                                    ),
                                   ),
                                 ),
+                                Container(
+                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  child: Text(data['dateTime']),
+                                ),
+                              ])
+                            else
+                              Column(children: [
+                                Container(
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  child: Text(data['message']),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  child: Text(data['dateTime']),
+                                ),
+                              ])
+                          else
+                            Column(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  child: Image.network(
+                                    data['imageUrl'],
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                  child: Text(data['message']),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  child: Text(data['dateTime']),
+                                )
+                              ],
+                            ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ShowUserDetailsPage(
+                                    userId: data['interactedBy'],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.all(10.0),
+                              padding: const EdgeInsets.all(10.0),
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                border: Border.all(color: Colors.black),
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+
+                              height: 60,
+                              // width: 1400,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.blue,
+                                        width: 0.1,
+                                      ),
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.network(
+                                        profileImageUrl ?? '',
+                                        width: 30,
+                                        height: 30,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 20,
+                                  ),
+                                  Text(
+                                    firstName ?? '',
+                                    style: TextStyle(fontSize: 20),
+                                  ),
+                                ],
                               ),
                             ),
-                            Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              child: Text(data['dateTime']),
-                            ),
-                          ])
-                        else
-                          Column(children: [
-                            Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                              child: Text(data['message']),
-                            ),
-                            Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              child: Text(data['dateTime']),
-                            ),
-                          ])
-                      else
-                        Column(
+                          ),
+                        ],
+                      )
+                    else if (data['interactedBy'] != widget.interactedBy)
+                      Container(
+                        alignment: Alignment.centerLeft,
+                        child: Row(
                           children: [
-                            Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                              child: Image.network(
-                                data['imageUrl'],
-                                width: 100,
-                                height: 100,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-                              child: Text(data['message']),
-                            ),
-                            Container(
-                              alignment: Alignment.centerRight,
-                              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              child: Text(data['dateTime']),
-                            )
-                          ],
-                        )
-                    else if (urlString != "")
-                      Column(children: [
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          width: 550,
-                          height: 330,
-                          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: VideoContainer( alignment: 'left',videoUrl: urlString,),
-                        ),
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: Text(data['message']),
-                        ),
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Text(data['dateTime']),
-                        ),
-                      ])
-                    else if (data['imageUrl'] == "")
-                      if (data['message']!.startsWith('https://'))
-                        Column(children: [
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
+                            GestureDetector(
                               onTap: () {
-                                window.open(data['message']!, '_blank');
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ShowUserDetailsPage(
+                                      userId: data['interactedBy'],
+                                    ),
+                                  ),
+                                );
                               },
                               child: Container(
-                                alignment: Alignment.centerLeft,
-                                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                child: Text(
-                                  data['message'],
-                                  style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                margin: const EdgeInsets.all(10.0),
+                                padding: const EdgeInsets.all(10.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  border: Border.all(color: Colors.black),
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+
+                                height: 60,
+                                // width: 1400,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.blue,
+                                          width: 0.1,
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.network(
+                                          profileImageUrl ?? '',
+                                          width: 30,
+                                          height: 30,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 20,
+                                    ),
+                                    Text(
+                                      firstName ?? '',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ),
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Text(data['dateTime']),
-                          ),
-                        ])
-                      else
-                        Column(children: [
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: Text(data['message']),
-                          ),
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Text(data['dateTime']),
-                          ),
-                        ])
-
-                    else
-                      Column(
-                        children: [
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: Image.network(
-                              data['imageUrl'],
-                              width: 30,
-                              height: 30,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-                            child: Text(data['message']),
-                          ),
-                          Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Text(data['dateTime']),
-                          )
-                        ],
+                            if (urlString != "")
+                              Column(children: [
+                                Container(
+                                  alignment: Alignment.centerLeft,
+                                  width: 550,
+                                  height: 330,
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  child: VideoContainer(
+                                    alignment: 'left',
+                                    videoUrl: urlString,
+                                  ),
+                                ),
+                                Container(
+                                  alignment: Alignment.centerLeft,
+                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  child: Text(data['message']),
+                                ),
+                                Container(
+                                  alignment: Alignment.centerLeft,
+                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  child: Text(data['dateTime']),
+                                ),
+                              ])
+                            else if (data['imageUrl'] == "")
+                              if (data['message']!.startsWith('https://'))
+                                Column(children: [
+                                  MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        window.open(data['message']!, '_blank');
+                                      },
+                                      child: Container(
+                                        alignment: Alignment.centerLeft,
+                                        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                        child: Text(
+                                          data['message'],
+                                          style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    alignment: Alignment.centerLeft,
+                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    child: Text(data['dateTime']),
+                                  ),
+                                ])
+                              else
+                                Column(children: [
+                                  Container(
+                                    alignment: Alignment.centerLeft,
+                                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    child: Text(data['message']),
+                                  ),
+                                  Container(
+                                    alignment: Alignment.centerLeft,
+                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    child: Text(data['dateTime']),
+                                  ),
+                                ])
+                            else
+                              Column(
+                                children: [
+                                  Container(
+                                    alignment: Alignment.centerLeft,
+                                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    child: Image.network(
+                                      data['imageUrl'],
+                                      width: 30,
+                                      height: 30,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  Container(
+                                    alignment: Alignment.centerLeft,
+                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                    child: Text(data['message']),
+                                  ),
+                                  Container(
+                                    alignment: Alignment.centerLeft,
+                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    child: Text(data['dateTime']),
+                                  )
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
                     if (widget.youBlocked)
-                      if (index == (snapshot.data!.docs.length -1))
+                      if (index == (snapshot.data!.docs.length - 1))
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -254,7 +381,6 @@ class _AllInteractionsState extends State<AllInteractions> {
                                     ),
                                   ),
                                 );
-                                setState(() {});
                               },
                               icon: Icon(Icons.block),
                             )
@@ -272,20 +398,36 @@ class _AllInteractionsState extends State<AllInteractions> {
     );
   }
 
-  Future<void> fetchMesssagerDetails(data) async {
-    print(data);
-    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-    var userDocument = await usersCollection.doc(data).get();
-    if (userDocument.exists) {
-      setState(() {
-        currentMessageFirstName= userDocument['firstName'] ?? '';
-        currentMessageProfileImageUrl = userDocument['profileImageUrl'] ?? '';
+  Future<void> fetchMessengerDetails(data) async {
+    CollectionReference groupCollection = FirebaseFirestore.instance.collection('Groups');
+    var userDocumentSnapshot = await groupCollection.doc(data).get();
 
-      });
+    List<String> userMembers = [];
+
+    if (userDocumentSnapshot.exists) {
+      var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
+      if (userDocument['groupMembers'] != null) {
+        userMembers = List<String>.from(userDocument['groupMembers']);
+      }
     } else {
-      String message = "user details not found";
-      showAlert(context, message);
+      userMembers = data.split('-');
     }
-  }
+    CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
 
+    for (String userMember in userMembers) {
+      var userDocumentSnapshot = await usersCollection.doc(userMember).get();
+      var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
+      List<String> user = [userDocument['firstName'], userDocument['profileImageUrl']];
+
+      // Ensure the mapOfLists is initialized before updating it
+      if (mapOfLists[userMember] == null) {
+        mapOfLists[userMember] = [];
+      }
+        mapOfLists[userMember]!.addAll(user);
+
+    }
+    setState(() {
+      mapOfLists;
+    });
+  }
 }

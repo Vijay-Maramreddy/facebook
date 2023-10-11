@@ -80,6 +80,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
       'description': groupDescription,
       'groupProfileImageUrl': imageUrl,
       'admin': admins,
+      'superAdmin':currentUserId,
+      'createdBy':currentUserId,
       'groupMembers': selectedFriends,
       'groupId': uid,
       'dateTime': dateTime,

@@ -43,7 +43,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   @override
   void initState() {
     setState(() {
-      print(widget.selectedGroupDocument);
       groupName = widget.selectedGroupDocument[0];
       groupProfileImageUrl = widget.selectedGroupDocument[1];
       getGroupData(widget.clickedGroupId!);
@@ -63,14 +62,14 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         children: [
           GestureDetector(
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => GroupInfoPage(
-              //       groupId: widget.clickedGroupId,
-              //     ),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GroupInfoPage(
+                    groupId: widget.clickedGroupId,
+                  ),
+                ),
+              );
             },
             child: Container(
               margin: const EdgeInsets.all(10.0),
@@ -161,7 +160,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                       IconButton(
                         padding: EdgeInsets.fromLTRB(0, 0, 0, 5),
                         onPressed: () async {
-                          print("Button is pressed");
                           await uploadVideoAndSaveUrl();
                         },
                         icon: Icon(Icons.video_library),
@@ -176,7 +174,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                     icon: Icon(Icons.send)),
                 IconButton(
                   onPressed: () async {
-                    print("button is pressed");
                     await sendMessageWithLocation();
                   },
                   icon: Icon(Icons.map),
@@ -190,7 +187,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   }
 
   Future<void> getGroupData(String clickedGroupId) async {
-    print(clickedGroupId);
     DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
     await FirebaseFirestore.instance.collection('Groups').doc(clickedGroupId).get();
 
@@ -200,7 +196,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         groupDescription = documentSnapshot.data()!['description'];
         groupProfileImageUrl = documentSnapshot.data()!['groupProfileImageUrl'];
         groupMembers = List<String>.from(documentSnapshot.data()!['groupMembers'] as List<dynamic>);
-        print(groupName);
       });
     } else {
       print("Group not found for id: $clickedGroupId");
@@ -262,25 +257,12 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     User? user = FirebaseAuth.instance.currentUser;
     String? CurrentuserId = user?.uid;
 
-    // CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
-    //
-    // QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
-    //     .where('interactedBy', isEqualTo: CurrentuserId)
-    //     .where('interactedTo', isEqualTo: widget.documentId)
-    //     .get() as QuerySnapshot<Map<String, dynamic>>;
-    // DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
-    // count = doc['count'];
-    // count = count + 1;
-    // await doc.reference.update({'count': count});
-    // await doc.reference.update({'count': currentCount + 1});
-
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     String? imageUrl = '';
     String text = _messageController.text;
-    // String groupId = combineIds(CurrentuserId, widget.documentId);
     if (text.isNotEmpty) {
       await interactionsCollection.add({
         'interactedBy': CurrentuserId,
@@ -355,7 +337,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
 
   Future<XFile?> pickVideoFromGallery() async {
     XFile? videoFile = await ImagePicker().pickVideo(source: ImageSource.gallery);
-    print(videoFile);
     return videoFile;
   }
   void uploadImageAndSaveUrl() async {
@@ -390,7 +371,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
 
   Future<String?> _showVideoPickerDialog(String? videoUrl) async {
     if (videoUrl != null && videoUrl.isNotEmpty) {
-      print("inside video dialog box");
       var message = '';
 
       final VideoPlayerController _videoPlayerController = VideoPlayerController.network(videoUrl);
@@ -461,7 +441,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? videoUrl = await uploadVideoToStorage('groupVideos/' + uuid, video!);
-      print(videoUrl);
       String? message = await _showVideoPickerDialog(videoUrl);
 
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
@@ -495,14 +474,12 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     await child.putData(bytes);
     // TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await child.getDownloadURL();
-    print(downloadUrl);
 
     return downloadUrl;
   }
 
   Future<void> sendMessageWithLocation() async {
     String? locationMessage = await _getUserLocation();
-    print("$locationMessage");
 
     if (locationMessage != null) {
       // Send the location message to Firebase
