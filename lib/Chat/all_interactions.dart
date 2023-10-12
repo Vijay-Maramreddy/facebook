@@ -1,14 +1,9 @@
 import 'dart:async';
 import 'dart:html';
 
-import 'package:chewie/chewie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-import 'package:video_player/video_player.dart';
-
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import '../reels/video_container.dart';
@@ -33,14 +28,16 @@ class AllInteractions extends StatefulWidget {
 
 class _AllInteractionsState extends State<AllInteractions> {
   Map<String, List<String>> mapOfLists = {};
-  String firstName = "";
-  String profileImageUrl = "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
+  String interactedByUserFirstName = "";
+  String interactedWithUserFirstName = "";
+  String interactedByUserProfileImageUrl = "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     fetchMessengerDetails(widget.groupId);
+    var blocked = widget.oppositeBlocked;
   }
 
   @override
@@ -54,32 +51,86 @@ class _AllInteractionsState extends State<AllInteractions> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator()); // Show a loading indicator while data is loading
+          return const Center(child: CircularProgressIndicator()); // Show a loading indicator while data is loading
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No data available.'));
+          return const Center(child: Text('No data available.'));
         } else {
-          // Data is available, build your UI accordingly
           return ListView.builder(
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               final messageText = data['message'];
               dynamic urlString = data['videoUrl'];
-              String userUid = data['interactedBy'];
-              List<String>? userValues = mapOfLists[userUid];
-              if (userValues != null) {
-                firstName = userValues[0]; // First element is the first name
-                profileImageUrl = userValues[1]; // Second element is the profile image URL
+              String interactedByUserUid = data['interactedBy'];
+              String interactedWithUserId=data['interactedWith'];
+              List<String>? interactedByUserValues = mapOfLists[interactedByUserUid];
+              if (interactedByUserValues != null) {
+                interactedByUserFirstName = interactedByUserValues[0]; // First element is the first name
+                interactedByUserProfileImageUrl = interactedByUserValues[1]; // Second element is the profile image URL
               } else {
-                print('No values found for the user with UID: $userUid');
+                print('No values found for the user with UID: $interactedByUserUid');
               }
-              // fetchMessengerDetails(data['interactedBy']);
+              List<String>? interactedWithUserValues = mapOfLists[interactedWithUserId];
+              if (interactedWithUserValues != null) {
+                interactedWithUserFirstName = interactedWithUserValues[0]; // First element is the first name
+                // interactedWithUserProfileImageUrl = interactedWithUserValues[1]; // Second element is the profile image URL
+              } else {
+                print('No values found for the user with UID: $interactedByUserUid');
+              }
+              User? user=FirebaseAuth.instance.currentUser;
+              String? currentUserId=user?.uid;
+              String msg1="";
+              String msg2="";
+              String msg3="";
+              if(data['baseText']!="")
+                {
+                  if(data['interactedBy']==currentUserId)
+                  {
+                    msg1="you";
+                    msg3=data['baseText'];
+                    msg2=interactedWithUserFirstName;
+                  }
+                  else if(data['interactedWith']==currentUserId)
+                  {
+                    msg1=interactedByUserFirstName;
+                    msg3=data['baseText'];
+                    msg2="you";
+                  }
+                  else
+                    {
+                      msg1=interactedByUserFirstName;
+                      msg3=data['baseText'];
+                      msg2=interactedWithUserFirstName;
+                    }
+                }
               return Visibility(
                 child: Column(
                   children: [
-                    if (data['interactedBy'] == widget.interactedBy)
+                    if(data['baseText']!="")
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.rectangle,
+                                color: Colors.white60,
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 0.1,
+                                ),
+                              ),
+                              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                              child: Text("$msg1 $msg3 $msg2")
+                          ),
+                          Text(data['dateTime']),
+                          const SizedBox(
+                            height: 20,
+                          )
+                        ],
+                      )
+                    else if (data['interactedBy'] == widget.interactedBy)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -88,18 +139,18 @@ class _AllInteractionsState extends State<AllInteractions> {
                               Container(
                                 width: 550,
                                 height: 330,
-                                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                 child: VideoContainer(
                                   alignment: 'right',
                                   videoUrl: urlString,
                                 ),
                               ),
                               Container(
-                                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                 child: Text(data['message']),
                               ),
                               Container(
-                                padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                 child: Text(data['dateTime']),
                               ),
                             ])
@@ -113,27 +164,27 @@ class _AllInteractionsState extends State<AllInteractions> {
                                       window.open(data['message']!, '_blank');
                                     },
                                     child: Container(
-                                      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                       child: Text(
                                         data['message'],
-                                        style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                        style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
                                       ),
                                     ),
                                   ),
                                 ),
                                 Container(
-                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                   child: Text(data['dateTime']),
                                 ),
                               ])
                             else
                               Column(children: [
                                 Container(
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                   child: Text(data['message']),
                                 ),
                                 Container(
-                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                   child: Text(data['dateTime']),
                                 ),
                               ])
@@ -141,7 +192,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                             Column(
                               children: [
                                 Container(
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                   child: Image.network(
                                     data['imageUrl'],
                                     width: 100,
@@ -150,11 +201,11 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   ),
                                 ),
                                 Container(
-                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                                   child: Text(data['message']),
                                 ),
                                 Container(
-                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                   child: Text(data['dateTime']),
                                 )
                               ],
@@ -195,19 +246,19 @@ class _AllInteractionsState extends State<AllInteractions> {
                                     ),
                                     child: ClipOval(
                                       child: Image.network(
-                                        profileImageUrl ?? '',
+                                        interactedByUserProfileImageUrl ?? '',
                                         width: 30,
                                         height: 30,
                                         fit: BoxFit.cover,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(
+                                  const SizedBox(
                                     width: 20,
                                   ),
                                   Text(
-                                    firstName ?? '',
-                                    style: TextStyle(fontSize: 20),
+                                    interactedByUserFirstName ?? '',
+                                    style: const TextStyle(fontSize: 20),
                                   ),
                                 ],
                               ),
@@ -256,19 +307,19 @@ class _AllInteractionsState extends State<AllInteractions> {
                                       ),
                                       child: ClipOval(
                                         child: Image.network(
-                                          profileImageUrl ?? '',
+                                          interactedByUserProfileImageUrl ?? '',
                                           width: 30,
                                           height: 30,
                                           fit: BoxFit.cover,
                                         ),
                                       ),
                                     ),
-                                    SizedBox(
+                                    const SizedBox(
                                       width: 20,
                                     ),
                                     Text(
-                                      firstName ?? '',
-                                      style: TextStyle(fontSize: 20),
+                                      interactedByUserFirstName ?? '',
+                                      style: const TextStyle(fontSize: 20),
                                     ),
                                   ],
                                 ),
@@ -280,7 +331,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   alignment: Alignment.centerLeft,
                                   width: 550,
                                   height: 330,
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                   child: VideoContainer(
                                     alignment: 'left',
                                     videoUrl: urlString,
@@ -288,12 +339,12 @@ class _AllInteractionsState extends State<AllInteractions> {
                                 ),
                                 Container(
                                   alignment: Alignment.centerLeft,
-                                  padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                   child: Text(data['message']),
                                 ),
                                 Container(
                                   alignment: Alignment.centerLeft,
-                                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                   child: Text(data['dateTime']),
                                 ),
                               ])
@@ -308,17 +359,17 @@ class _AllInteractionsState extends State<AllInteractions> {
                                       },
                                       child: Container(
                                         alignment: Alignment.centerLeft,
-                                        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                         child: Text(
                                           data['message'],
-                                          style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                          style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
                                         ),
                                       ),
                                     ),
                                   ),
                                   Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                     child: Text(data['dateTime']),
                                   ),
                                 ])
@@ -326,12 +377,12 @@ class _AllInteractionsState extends State<AllInteractions> {
                                 Column(children: [
                                   Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                     child: Text(data['message']),
                                   ),
                                   Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                     child: Text(data['dateTime']),
                                   ),
                                 ])
@@ -340,7 +391,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                 children: [
                                   Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                     child: Image.network(
                                       data['imageUrl'],
                                       width: 30,
@@ -350,12 +401,12 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   ),
                                   Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                                     child: Text(data['message']),
                                   ),
                                   Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                     child: Text(data['dateTime']),
                                   )
                                 ],
@@ -369,8 +420,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text("You have blocked this User, please Unblock to interact to the User"),
-                            Text("please click on below icon to Navigate to Details Page whre you can unBlock the User"),
+                            const Text("please click on below icon to Navigate to Details Page where you can unBlock the User"),
                             IconButton(
                               onPressed: () {
                                 Navigator.push(
@@ -382,12 +432,13 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   ),
                                 );
                               },
-                              icon: Icon(Icons.block),
+                              icon: const Icon(Icons.block),
                             )
                           ],
                         ),
-                    if (widget.oppositeBlocked.contains(widget.interactedBy) && index == snapshot.data!.docs.length)
-                      Text("You have been blocked by the opposite person, messaging is not allowed"),
+                    if (widget.oppositeBlocked.contains(widget.interactedBy))
+                      if (index == (snapshot.data!.docs.length - 1))
+                        const Text("You have been blocked by the opposite person, messaging is not allowed"),
                   ],
                 ),
               );
@@ -423,11 +474,12 @@ class _AllInteractionsState extends State<AllInteractions> {
       if (mapOfLists[userMember] == null) {
         mapOfLists[userMember] = [];
       }
-        mapOfLists[userMember]!.addAll(user);
-
+      mapOfLists[userMember]!.addAll(user);
     }
-    setState(() {
-      mapOfLists;
-    });
+    if(mounted) {
+      setState(() {
+        mapOfLists;
+      });
+    }
   }
 }

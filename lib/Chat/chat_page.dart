@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -16,11 +14,10 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  String? selectedDocumentId;
-  Map<String, dynamic>? selectedDocument;
+  String? selectedUserDetailsDocumentId;
+  Map<String, dynamic>? selectedUserDetailsDocumentData;
   String? groupId;
-  late Future<QuerySnapshot<Map<String, dynamic>>> querySnapshot;
-  // late Future<List<String>> groupUids;
+  late Future<QuerySnapshot<Map<String, dynamic>>> allUsersSnapshot;
   int count = 0;
   int counter = 0;
   Map<String, int> resultMap = {};
@@ -34,12 +31,11 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     setState(() {
-      querySnapshot = getUsers();
+      allUsersSnapshot = getUsers();
       getGroups();
       retrieveFieldValues();
       getBlockedList();
     });
-
     super.initState();
   }
 
@@ -58,7 +54,7 @@ class _ChatPageState extends State<ChatPage> {
       return await FirebaseFirestore.instance.collection('users').get();
     } catch (e) {
       print('Error retrieving users: $e');
-      throw e; // Rethrow the error to propagate it further if needed
+      rethrow; // Rethrow the error to propagate it further if needed
     }
   }
 
@@ -88,41 +84,39 @@ class _ChatPageState extends State<ChatPage> {
                         child: Column(
                           children: [
                             Container(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.black,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: Colors.white,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.black,
                                 ),
-                                margin: const EdgeInsets.all(10),
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                                child: const Text(
-                                  'Friends List',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 32,
-                                  ),
+                                borderRadius: BorderRadius.circular(10),
+                                color: Colors.white,
+                              ),
+                              margin: const EdgeInsets.all(10),
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                              child: const Text(
+                                'Friends List',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 32,
                                 ),
                               ),
                             ),
                             Expanded(
                               child: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                                future: querySnapshot,
+                                future: allUsersSnapshot,
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
                                     return const CircularProgressIndicator();
                                   } else if (snapshot.hasError) {
                                     return Text('Error: ${snapshot.error}');
                                   } else {
-                                    final querySnapshot = snapshot.data;
+                                    final allUsersQuerySnapshot = snapshot.data;
 
                                     return ListView.builder(
-                                      itemCount: querySnapshot!.docs.length,
+                                      itemCount: allUsersQuerySnapshot!.docs.length,
                                       itemBuilder: (context, index) {
-                                        String? key = querySnapshot.docs[index].id;
+                                        String? key = allUsersQuerySnapshot.docs[index].id;
                                         User? user = FirebaseAuth.instance.currentUser;
                                         String? currentUserId = user?.uid;
                                         if (key == currentUserId) {
@@ -131,20 +125,18 @@ class _ChatPageState extends State<ChatPage> {
                                         int? value = resultMap[key];
 
                                         return Padding(
-                                          padding: EdgeInsets.all(10),
+                                          padding: const EdgeInsets.all(10),
                                           child: ElevatedButton(
                                             onPressed: () {
                                               setState(() {
-                                                User? user = FirebaseAuth.instance.currentUser;
-                                                String? currentUserId = user?.uid;
                                                 String? interactedBy = currentUserId;
-                                                String? interactedTo = querySnapshot.docs[index].id;
-                                                updateOrAddInteraction(interactedBy!, interactedTo!);
-                                                groupId = createGroupId(querySnapshot.docs[index].id);
-                                                selectedDocument = querySnapshot.docs[index].data();
-                                                selectedDocumentId = querySnapshot.docs[index].id;
-                                                deletedMessageCount(interactedBy!, interactedTo!);
-                                                resultMap[selectedDocumentId!] = 0;
+                                                String? interactedTo = allUsersQuerySnapshot.docs[index].id;
+                                                updateOrAddInteraction(interactedBy!, interactedTo);
+                                                groupId = createGroupId(allUsersQuerySnapshot.docs[index].id);
+                                                selectedUserDetailsDocumentData = allUsersQuerySnapshot.docs[index].data();
+                                                selectedUserDetailsDocumentId = allUsersQuerySnapshot.docs[index].id;
+                                                deletedMessageCount(interactedBy, interactedTo);
+                                                resultMap[selectedUserDetailsDocumentId!] = 0;
                                                 isGroup = false;
                                               });
                                             },
@@ -153,7 +145,7 @@ class _ChatPageState extends State<ChatPage> {
                                                 borderRadius: BorderRadius.circular(10),
                                                 color: Colors.blue,
                                               ),
-                                              padding: EdgeInsets.all(8),
+                                              padding: const EdgeInsets.all(8),
                                               child: Row(
                                                 children: [
                                                   Container(
@@ -168,7 +160,7 @@ class _ChatPageState extends State<ChatPage> {
                                                     ),
                                                     child: ClipOval(
                                                       child: Image.network(
-                                                        querySnapshot.docs[index].data()['profileImageUrl'],
+                                                        allUsersQuerySnapshot.docs[index].data()['profileImageUrl'],
                                                         width: 30,
                                                         height: 30,
                                                         fit: BoxFit.cover,
@@ -183,13 +175,13 @@ class _ChatPageState extends State<ChatPage> {
                                                     child: Row(
                                                       children: [
                                                         Text(
-                                                          querySnapshot.docs[index].data()['firstName'],
+                                                          allUsersQuerySnapshot.docs[index].data()['firstName'],
                                                           style: const TextStyle(fontSize: 26),
                                                         ),
                                                         SizedBox(
                                                           child: Visibility(
-                                                            visible: !blockedList.contains(querySnapshot.docs[index].id),
-                                                            child: Text("$value", style: TextStyle(color: Colors.red)),
+                                                            visible: !blockedList.contains(allUsersQuerySnapshot.docs[index].id),
+                                                            child: Text("$value", style: const TextStyle(color: Colors.red)),
                                                           ),
                                                         )
                                                       ],
@@ -249,10 +241,8 @@ class _ChatPageState extends State<ChatPage> {
                                   String name = groupData[0];
                                   String profileImageUrl = groupData[1];
                                   String groupId = groupData[2];
-
                                   return Padding(
-                                    
-                                    padding: EdgeInsets.all(10),
+                                    padding: const EdgeInsets.all(10),
                                     child: ElevatedButton(
                                       onPressed: () {
                                         setState(() {
@@ -322,10 +312,10 @@ class _ChatPageState extends State<ChatPage> {
                 child: SizedBox(
                   width: 1100,
                   child: ChatWidget(
-                      documentData: selectedDocument,
-                      documentId: selectedDocumentId,
+                      selectedUserDetailsDocumentData: selectedUserDetailsDocumentData,
+                      selectedUserDetailsDocumentId: selectedUserDetailsDocumentId,
                       groupId: groupId,
-                      isBlocked: blockedList.contains(selectedDocumentId)),
+                      isBlockedByYou: blockedList.contains(selectedUserDetailsDocumentId)),
                 ),
               ),
             ),
@@ -371,12 +361,9 @@ class _ChatPageState extends State<ChatPage> {
         .where('interactedTo', isEqualTo: interactedTo)
         .get() as QuerySnapshot<Map<String, dynamic>>;
     if (querySnapshot.docs.isNotEmpty) {
-      // Document exists, update count field
       DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
       count = doc['count'] ?? 0;
-      // await doc.reference.update({'count': currentCount + 1});
     } else {
-      // Document doesn't exist, create a new one
       await messageCount.add({
         'interactedBy': interactedBy,
         'interactedTo': interactedTo,
@@ -390,7 +377,6 @@ class _ChatPageState extends State<ChatPage> {
     QuerySnapshot<Object?> querySnapshot =
         await messageCount.where('interactedBy', isEqualTo: interactedTo).where('interactedTo', isEqualTo: interactedBy).get();
     for (QueryDocumentSnapshot<Object?> doc in querySnapshot.docs) {
-      // Update the 'count' field to 0
       await messageCount.doc(doc.id).update({
         'count': 0,
       });
@@ -406,18 +392,17 @@ class _ChatPageState extends State<ChatPage> {
       for (QueryDocumentSnapshot<Map<String, dynamic>> document in querySnapshot.docs) {
         User? user = FirebaseAuth.instance.currentUser;
         String? currentUserId = user?.uid;
-        if (document.data()!['interactedTo'] == currentUserId) {
-          String uid = document.data()!['interactedBy']; // Document UID
-          int fieldValue = document.data()!['count'];
+        if (document.data()['interactedTo'] == currentUserId) {
+          String uid = document.data()['interactedBy']; // Document UID
+          int fieldValue = document.data()['count'];
           setState(() {
             resultMap[uid] = fieldValue;
           });
         }
       }
-      // return resultMap;
     } catch (e) {
       print('Error retrieving field values: $e');
-      throw e; // Rethrow the error to propagate it further if needed
+      rethrow; // Rethrow the error to propagate it further if needed
     }
   }
 

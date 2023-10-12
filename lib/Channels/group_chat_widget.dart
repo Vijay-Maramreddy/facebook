@@ -7,7 +7,6 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:facebook/Channels/group_info_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -33,11 +32,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   late List<String> groupMembers = [];
   late String groupProfileImageUrl = '';
 
-  TextEditingController _messageController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   Uint8List? image;
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  VideoPlayerController? _videoPlayerController;
   bool isGroup=true;
 
   @override
@@ -48,8 +46,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       getGroupData(widget.clickedGroupId!);
 
     });
-
-
     super.initState();
   }
 
@@ -80,7 +76,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                 borderRadius: BorderRadius.circular(10.0),
               ),
               height: 60,
-              // width: 1400,
               child: Row(
                 children: [
                   Container(
@@ -106,8 +101,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                     width: 20,
                   ),
                   Text(
-                    widget.selectedGroupDocument[0] ?? '',
-                    style: TextStyle(fontSize: 20),
+                    widget.selectedGroupDocument[0],
+                    style: const TextStyle(fontSize: 20),
                   ),
                 ],
               ),
@@ -117,7 +112,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
             children: [
               SingleChildScrollView(
                 scrollDirection: Axis.vertical, // Change to vertical scroll
-                child: Container(
+                child: SizedBox(
                   height: 500,
                   child: Center(
                     child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.clickedGroupId, groupId: widget.clickedGroupId,oppositeBlocked:const [],youBlocked:false),
@@ -135,34 +130,32 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            controller: _messageController,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter a message',
-                              border: InputBorder.none,
-                            ),
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter a message',
+                            border: InputBorder.none,
                           ),
                         ),
                       ),
                       IconButton(
-                        padding: EdgeInsets.fromLTRB(0, 0, 0, 5),
-                        icon: Icon(Icons.emoji_emotions), // Emoji icon
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
+                        icon: const Icon(Icons.emoji_emotions), // Emoji icon
                         onPressed: () {
                           openEmojiPicker(context); // Open the emoji picker modal bottom sheet
                         },
                       ),
                       IconButton(
-                        padding: EdgeInsets.fromLTRB(0, 0, 0, 6),
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 6),
                         onPressed: uploadImageAndSaveUrl,
-                        icon: Icon(Icons.add_a_photo),
+                        icon: const Icon(Icons.add_a_photo),
                       ),
                       IconButton(
-                        padding: EdgeInsets.fromLTRB(0, 0, 0, 5),
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
                         onPressed: () async {
                           await uploadVideoAndSaveUrl();
                         },
-                        icon: Icon(Icons.video_library),
+                        icon: const Icon(Icons.video_library),
                       )
                     ],
                   ),
@@ -171,12 +164,12 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                     onPressed: () {
                       sendMessageOrIcon();
                     },
-                    icon: Icon(Icons.send)),
+                    icon: const Icon(Icons.send)),
                 IconButton(
                   onPressed: () async {
                     await sendMessageWithLocation();
                   },
-                  icon: Icon(Icons.map),
+                  icon: const Icon(Icons.map),
                 ),
               ])
             ],
@@ -213,7 +206,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
               height: 100,
               child: Row(
                 children: [
-                  Container(
+                  SizedBox(
                     width: 300,
                     height: 100,
                     child: TextField(
@@ -255,7 +248,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
 
   void sendMessageOrIcon() async {
     User? user = FirebaseAuth.instance.currentUser;
-    String? CurrentuserId = user?.uid;
+    String? currentUserId = user?.uid;
 
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
@@ -265,7 +258,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     String text = _messageController.text;
     if (text.isNotEmpty) {
       await interactionsCollection.add({
-        'interactedBy': CurrentuserId,
+        'baseText':"",
+        'interactedBy': currentUserId,
         'interactedWith': widget.clickedGroupId,
         'imageUrl': imageUrl,
         'dateTime': formattedDateTime,
@@ -347,23 +341,21 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-      String? imageUrl = await uploadImageToStorage('groupImages/' + uuid, image!);
+      String? imageUrl = await uploadImageToStorage('groupImages/$uuid', image!);
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
-      String? CurrentuserId = user?.uid;
-      // String groupId = combineIds(CurrentuserId, widget.documentId);
-      if (imageUrl != null) {
-        await interactionsCollection.add({
-          'interactedBy': CurrentuserId,
-          'interactedWith': widget.clickedGroupId,
-          'imageUrl': imageUrl,
-          'dateTime': dateTime,
-          'message': message,
-          'groupId': widget.clickedGroupId,
-          'videoUrl': '',
-          'visibility':true,
-        });
-      }
+      String? currentUserId = user?.uid;
+      await interactionsCollection.add({
+        'baseText':"",
+        'interactedBy': currentUserId,
+        'interactedWith': widget.clickedGroupId,
+        'imageUrl': imageUrl,
+        'dateTime': dateTime,
+        'message': message,
+        'groupId': widget.clickedGroupId,
+        'videoUrl': '',
+        'visibility':true,
+      });
     } else {
       print('No image picked.');
     }
@@ -373,11 +365,11 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     if (videoUrl != null && videoUrl.isNotEmpty) {
       var message = '';
 
-      final VideoPlayerController _videoPlayerController = VideoPlayerController.network(videoUrl);
-      await _videoPlayerController.initialize();
+      final VideoPlayerController videoPlayerController = VideoPlayerController.network(videoUrl);
+      await videoPlayerController.initialize();
 
-      final ChewieController _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
+      final ChewieController chewieController = ChewieController(
+        videoPlayerController: videoPlayerController,
         aspectRatio: 16 / 9,
         autoPlay: true,
         looping: true,
@@ -394,7 +386,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                 SizedBox(
                   width: 500,
                   height: 400,
-                  child: Chewie(controller: _chewieController),
+                  child: Chewie(controller: chewieController),
                 ),
                 TextField(
                   onChanged: (value) {
@@ -423,8 +415,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       );
 
       // Dispose the controllers after the dialog is closed
-      _videoPlayerController.dispose();
-      _chewieController.dispose();
+      videoPlayerController.dispose();
+      chewieController.dispose();
 
       return message;
     } else {
@@ -440,7 +432,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-      String? videoUrl = await uploadVideoToStorage('groupVideos/' + uuid, video!);
+      String? videoUrl = await uploadVideoToStorage('groupVideos/$uuid', video!);
       String? message = await _showVideoPickerDialog(videoUrl);
 
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
@@ -449,6 +441,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       // String groupId = combineIds(currentUserId, widget.documentId);
       if (videoUrl != null) {
         await interactionsCollection.add({
+          'baseText':"",
           'interactedBy': currentUserId,
           'interactedWith': widget.clickedGroupId,
           'videoUrl': videoUrl,
@@ -495,8 +488,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-    // String groupId = combineIds(currentUserId, widget.documentId);
     await interactionsCollection.add({
+      'baseText':"",
       'interactedBy': currentUserId,
       'interactedWith': widget.clickedGroupId,
       'imageUrl': '',

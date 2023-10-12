@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../app_style.dart';
 import '../base_page.dart';
@@ -29,12 +30,13 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   bool makeAllMembersVisible = false;
 
   late List<String> friendsUid = [];
-  late List<String> selectedFriends=[];
+  late List<String> selectedFriends = [];
   late List<List<String>> friendsData = [];
 
   List<String> admins = [];
   List<String> selectedAdmins = [];
   List<String> selectedGroupMembers = [];
+  List<String> userNameOfSelectedFriends = [];
   List<String> groupMembers = [];
   Map<String, List<String>> mapOfLists = {};
   String superAdmin = "";
@@ -450,7 +452,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
 
         if (admins.contains(currentUserId)) {
           editable = true;
-          print("editable status is : $editable");
         }
         selectedAdmins = List<String>.from(admins);
         selectedGroupMembers = List<String>.from(groupMembers);
@@ -484,11 +485,47 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       'groupMembers': selectedGroupMembers,
     };
 
+    String? message1 = "";
+    List<String> tempGroupMembers = groupMembers;
+    groupMembers.removeWhere((element) => selectedGroupMembers.contains(element));
+    String message = "removed group members ";
+    for (String members in tempGroupMembers) {
+      message1 = mapOfLists[members]?[0];
+      message = "$message $message1";
+    }
+    if (message1 != "") {
+      sendMessageOrIcon(message);
+    }
+
+    print("the admis are :$admins");
+    // List<String> actualAdmins = admins;
+    List<String> tempAdminsMembers = [...admins];
+    String? message2 = "";
+    tempAdminsMembers.removeWhere((element) => selectedAdmins.contains(element));
+    for (String members in tempAdminsMembers) {
+      message2 = mapOfLists[members]?[0];
+      message = "demoted $message2 from admin to general member";
+    }
+    if (message2 != "") {
+      sendMessageOrIcon(message);
+    }
+
+    List<String> tempAdminsMembers2 = [...admins];
+    print("the admins are :$admins and selected admins are $selectedAdmins");
+    selectedAdmins.removeWhere((element) => tempAdminsMembers2.contains(element));
+    String? message3 = "";
+    for (String members in selectedAdmins) {
+      message3 = mapOfLists[members]?[0];
+      message = "promoted $message3 from general member to admin";
+    }
+    if (message3 != "") {
+      sendMessageOrIcon(message);
+    }
+
     try {
       FirebaseFirestore firestore = FirebaseFirestore.instance;
       String? id = widget.groupId;
       DocumentReference documentReference = firestore.collection('Groups').doc(widget.groupId);
-
       if (!documentReference.isNull) {
         await documentReference.update(updatedData);
         Navigator.pop(context);
@@ -519,8 +556,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       List<String> originalList = List<String>.from(groupDoc['groupMembers']);
       originalList.remove(currentUserId);
       await groupDocRef.update({'groupMembers': originalList});
-
-      print('Value removed and document updated successfully.');
     } else {
       print('Document not found for UID: $id');
     }
@@ -531,8 +566,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       List<String> originalList = List<String>.from(userDoc['groups']);
       originalList.remove(id);
       await userDocRef.update({'groups': originalList});
-
-      print('Value removed and document updated successfully.');
     } else {
       print('Document not found for UID: $currentUserId');
     }
@@ -542,9 +575,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   Future<void> fetchMessengerDetails(data) async {
     CollectionReference groupCollection = FirebaseFirestore.instance.collection('Groups');
     var userDocumentSnapshot = await groupCollection.doc(data).get();
-
     List<String> userMembers = [];
-
     if (userDocumentSnapshot.exists) {
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       if (userDocument['groupMembers'] != null) {
@@ -554,13 +585,10 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       userMembers = data.split('-');
     }
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-
     for (String userMember in userMembers) {
       var userDocumentSnapshot = await usersCollection.doc(userMember).get();
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       List<String> user = [userDocument['firstName'], userDocument['profileImageUrl']];
-
-      // Ensure the mapOfLists is initialized before updating it
       if (mapOfLists[userMember] == null) {
         mapOfLists[userMember] = [];
       }
@@ -578,11 +606,11 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         function1(element);
       }
     }
-    for (String element in list2) {
-      if (!list1.contains(element)) {
-        function2(element);
-      }
-    }
+    // for (String element in list2) {
+    //   if (!list1.contains(element)) {
+    //     function2(element);
+    //   }
+    // }
   }
 
   Future<void> function1(String element) async {
@@ -591,7 +619,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     List<String> originalList = List<String>.from(userDoc['groups']);
     originalList.remove(widget.groupId);
     await userDocRef.update({'groups': originalList});
-    print('Value removed and document updated successfully.');
   }
 
   Future<void> function2(String element) async {
@@ -600,7 +627,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     List<String> originalList = List<String>.from(userDoc['groups']);
     originalList.add(widget.groupId!);
     await userDocRef.update({'groups': originalList});
-    print('Value added and document updated successfully.');
   }
 
   void addMembersToGroup() {
@@ -648,12 +674,10 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                       ),
                       value: selectedFriends.contains(item[0]),
                       onChanged: (bool? value) {
-                        print(value);
                         setState(() {
                           if (value != null) {
                             if (value) {
-                                selectedFriends.add(item[0]);
-                              // print("selected friends are here $selectedFriends");
+                              selectedFriends.add(item[0]);
                             } else {
                               selectedFriends.remove(item[0]);
                             }
@@ -705,7 +729,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       setState(() {
         friendsUid;
       });
-      print("updated Friends Uid are $friendsUid");
     } else {
       print('User or friends not found.');
     }
@@ -733,22 +756,16 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     });
   }
 
-  void disposeAddMembersToGroup() {
-    setState(() {
-      friendsUid = [];
-      friendsData = [];
-      selectedFriends = [];
-    });
-  }
-
   Future<void> addSelectedFriendsToGroup() async {
     DocumentReference groupDocRef = FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
     DocumentSnapshot groupDoc = await groupDocRef.get();
-    print("all new members are $selectedFriends");
+    String message = "added ";
     for (String members in selectedFriends) {
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(members);
       DocumentSnapshot userDoc = await userDocRef.get();
-
+      userNameOfSelectedFriends.add(userDoc['firstName']);
+      String message2 = userDoc['firstName'];
+      message = "$message $message2";
       List<String> originalList = List<String>.from(userDoc['groups']);
       originalList.add(widget.groupId!);
       await userDocRef.update({'groups': originalList});
@@ -757,6 +774,31 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       await groupDocRef.update({'groupMembers': gOriginalList});
       setState(() {
         fetchFriends();
+      });
+    }
+    sendMessageOrIcon(message);
+  }
+
+  void sendMessageOrIcon(String message) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String? imageUrl = '';
+    // String groupId = combineIds(currentUserId, widget.groupId);
+    if (message.isNotEmpty) {
+      await interactionsCollection.add({
+        'interactedBy': currentUserId,
+        'interactedWith': widget.groupId,
+        'imageUrl': imageUrl,
+        'dateTime': formattedDateTime,
+        'message': "",
+        'groupId': widget.groupId,
+        'videoUrl': '',
+        'visibility': true,
+        'baseText': message,
       });
     }
   }

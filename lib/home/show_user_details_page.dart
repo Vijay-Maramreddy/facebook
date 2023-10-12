@@ -7,12 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:intl/intl.dart';
 
 import '../app_style.dart';
 import '../base_page.dart';
 
 class ShowUserDetailsPage extends StatefulWidget {
-  // final String? email;
   final String? userId;
   const ShowUserDetailsPage({super.key, this.userId});
 
@@ -21,7 +21,6 @@ class ShowUserDetailsPage extends StatefulWidget {
 }
 
 class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -61,7 +60,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   void savedata() async {
     if (_image != null) {
       String uuid = AppStyles.uuid();
-      imageUrl = await uploadImageToStorage('profileImage/' + uuid, _image!);
+      imageUrl = await uploadImageToStorage('profileImage/$uuid', _image!);
     } else {
       imageUrl = loadImageUrl;
     }
@@ -160,10 +159,10 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                             fit: BoxFit.cover,
                           ),
                         )
-                      : loadImageUrl!.isNotEmpty
+                      : loadImageUrl.isNotEmpty
                           ? ClipOval(
                               child: Image.network(
-                                loadImageUrl!,
+                                loadImageUrl,
                                 width: 200,
                                 height: 200,
                                 fit: BoxFit.cover,
@@ -351,7 +350,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                   onPressed: () {
                                     sendFriendrequest();
                                   },
-                                  child: Text("Send Friend Request"))),
+                                  child: const Text("Send Friend Request"))),
                           Visibility(
                               visible: requestStatus && !friendStatus,
                               child: Row(children: [
@@ -360,7 +359,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                     onPressed: () {
                                       cancelRequest();
                                     },
-                                    child: Text("Cancel request"))
+                                    child: const Text("Cancel request"))
                               ])),
                           Visibility(
                               visible: friendStatus,
@@ -368,13 +367,13 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                   onPressed: () {
                                     removeFriend();
                                   },
-                                  child: Text("Remove Friend")
+                                  child: const Text("Remove Friend")
                               )
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 20,),
+                    const SizedBox(height: 20,),
                     Visibility(
                         visible: !editable,
                         child: Row(
@@ -387,7 +386,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                     onPressed: () {
                                       addToBlocked();
                                     },
-                                    child: Text("Block"),
+                                    child: const Text("Block"),
                                 )
                             ),
                             Visibility(
@@ -396,7 +395,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                                     onPressed: () {
                                       removeFromBlocked();
                                     },
-                                    child: Text("UnBlock"),
+                                    child: const Text("UnBlock"),
                                 )
                             ),
                           ],
@@ -513,10 +512,10 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
 
     if (querySnapshot.docs.isNotEmpty) {
 
-      querySnapshot.docs.forEach((doc) {
+      for (var doc in querySnapshot.docs) {
         friendStatus = doc['friendStatus'];
         requestStatus = doc['requestStatus'];
-      });
+      }
     } else {
       print('No friend request found with requestId: $requestId');
     }
@@ -547,13 +546,11 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       {
         isBlocked=true;
       }
-    else
+    else {
       isBlocked=false;
+    }
   }
 
-  // import 'package:cloud_firestore/cloud_firestore.dart';
-
-// Function to add a string to the blocked list and update the document
   Future<void> addToBlocked() async {
     // Get the document reference
     User? user = FirebaseAuth.instance.currentUser;
@@ -580,23 +577,21 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     } catch (e) {
       print('Error adding to blocked list and updating document: $e');
     }
+    String message=" blocked ";
+    sendMessageOrIcon(message);
   }
 
   Future<void> removeFromBlocked() async {
-    // Get the document reference
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     DocumentReference documentReference =
     FirebaseFirestore.instance.collection('users').doc(currentUserId);
-
     try {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
       await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
       if (documentSnapshot.exists) {
         List<String> blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
         blockedList.remove(widget.userId!);
-
-        // Update the document with the modified blocked list
         await documentReference.update({'blocked': blockedList});
         setState(() {
           isBlocked=false;
@@ -607,7 +602,42 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     } catch (e) {
       print('Error adding to blocked list and updating document: $e');
     }
+    String message=" unblocked ";
+    sendMessageOrIcon(message);
   }
 
+  void sendMessageOrIcon(String message) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
 
+    CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo:widget.userId )
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+    DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+    int count = doc['count'];
+    count = count + 1;
+    await doc.reference.update({'count': count});
+    DateTime now = DateTime.now();
+    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String? imageUrl = '';
+    String groupId = combineIds(currentUserId, widget.userId);
+    if (message.isNotEmpty) {
+      await interactionsCollection.add({
+        'interactedBy': currentUserId,
+        'interactedWith': widget.userId,
+        'imageUrl': imageUrl,
+        'dateTime': formattedDateTime,
+        'message': "",
+        'groupId': groupId,
+        'videoUrl': '',
+        'visibility':true,
+        'baseText':message,
+      });
+    }
+  }
 }
