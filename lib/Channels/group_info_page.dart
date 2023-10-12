@@ -1,4 +1,3 @@
-import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,6 +13,7 @@ import '../home/show_user_details_page.dart';
 
 class GroupInfoPage extends StatefulWidget {
   final String? groupId;
+
   const GroupInfoPage({super.key, this.groupId});
 
   @override
@@ -29,14 +29,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   bool makeAdminsVisible = false;
   bool makeAllMembersVisible = false;
 
-  late List<String> friendsUid = [];
   late List<String> selectedFriends = [];
   late List<List<String>> friendsData = [];
 
   List<String> admins = [];
   List<String> selectedAdmins = [];
   List<String> selectedGroupMembers = [];
-  List<String> userNameOfSelectedFriends = [];
   List<String> groupMembers = [];
   Map<String, List<String>> mapOfLists = {};
   String superAdmin = "";
@@ -510,11 +508,11 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       sendMessageOrIcon(message);
     }
 
-    List<String> tempAdminsMembers2 = [...admins];
+    List<String> tempSelectedAdmins = [...selectedAdmins];
     print("the admins are :$admins and selected admins are $selectedAdmins");
-    selectedAdmins.removeWhere((element) => tempAdminsMembers2.contains(element));
+    tempSelectedAdmins.removeWhere((element) => admins.contains(element));
     String? message3 = "";
-    for (String members in selectedAdmins) {
+    for (String members in tempSelectedAdmins) {
       message3 = mapOfLists[members]?[0];
       message = "promoted $message3 from general member to admin";
     }
@@ -526,10 +524,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       FirebaseFirestore firestore = FirebaseFirestore.instance;
       String? id = widget.groupId;
       DocumentReference documentReference = firestore.collection('Groups').doc(widget.groupId);
-      if (!documentReference.isNull) {
-        await documentReference.update(updatedData);
-        Navigator.pop(context);
-      }
+      await documentReference.update(updatedData);
+      Navigator.pop(context);
       compareLists(groupMembers, selectedGroupMembers);
     } catch (e) {
       print("Error updating user details: $e");
@@ -630,7 +626,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   }
 
   void addMembersToGroup() {
-    if (friendsUid.isEmpty) {
+    if (friendsData.isEmpty) {
       String message = "All your friends are already present in this group";
       showAlert(context, message);
     } else {
@@ -646,44 +642,50 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: friendsData.map((item) {
-                    return CheckboxListTile(
-                      title: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.blue,
-                                width: 0.1,
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.blue,
+                                  width: 0.1,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: Image.network(
+                                  item[2],
+                                  width: 30,
+                                  height: 30,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-                            child: ClipOval(
-                              child: Image.network(
-                                item[2],
-                                width: 30,
-                                height: 30,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Text(item[1]),
-                        ],
-                      ),
-                      value: selectedFriends.contains(item[0]),
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value != null) {
-                            if (value) {
-                              selectedFriends.add(item[0]);
-                            } else {
-                              selectedFriends.remove(item[0]);
-                            }
-                          }
-                        });
-                      },
+                            Text(item[1]),
+                          ],
+                        ),
+                        Checkbox(
+                          value: isSelected(item),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value != null) {
+                                if (value) {
+                                  selectedFriends.add(item[0]);
+                                } else {
+                                  selectedFriends.remove(item[0]);
+                                }
+                              }
+                              print("Selected New Friends $selectedFriends");
+                            });
+                          },
+                        )
+                      ],
                     );
                   }).toList(),
                 ),
@@ -700,9 +702,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                     const SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: () {
-                        setState(() {
-                          selectedFriends;
-                        });
                         addSelectedFriendsToGroup();
                         Navigator.pop(context);
                       },
@@ -718,21 +717,26 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     }
   }
 
+  bool isSelected(List<String> item) {
+    var result = selectedFriends.contains(item[0]);
+    print("isSelected $selectedFriends ${item[0]} $result");
+    return result;
+  }
+
   Future<void> fetchFriends() async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
     // Check if the document exists and contains the 'friends' key
+    List<String> friendsUidTemp = [];
     if (documentSnapshot.exists && documentSnapshot.data()?['friends'] != null) {
-      friendsUid = List<String>.from(documentSnapshot.data()?['friends']);
-      removeElementsFromList1(friendsUid, groupMembers);
-      setState(() {
-        friendsUid;
-      });
+      friendsUidTemp = List<String>.from(documentSnapshot.data()?['friends']);
+      removeElementsFromList1(friendsUidTemp, groupMembers);
     } else {
       print('User or friends not found.');
     }
-    for (var friend in friendsUid) {
+    List<List<String>> friendsDataTemp = [];
+    for (var friend in friendsUidTemp) {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('users').doc(friend).get();
 
       if (documentSnapshot.exists) {
@@ -740,43 +744,42 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         String name = data['firstName'];
         String profileImageUrl = data['profileImageUrl'];
         List<String> friendData = [friend, name, profileImageUrl];
-        setState(() {
-          friendsData.add(friendData);
-          print(friendsData);
-        });
+        friendsDataTemp.add(friendData);
       } else {
         print('Document for friend $friend not found.');
       }
     }
+    setState(() {
+      friendsData.clear();
+      friendsData.addAll(friendsDataTemp);
+      print("Non member Friends Data $friendsData");
+    });
   }
 
   void removeElementsFromList1(List<String> list1, List<String> list2) {
-    setState(() {
-      list1.removeWhere((element) => list2.contains(element));
-    });
+    list1.removeWhere((element) => list2.contains(element));
   }
 
   Future<void> addSelectedFriendsToGroup() async {
     DocumentReference groupDocRef = FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
     DocumentSnapshot groupDoc = await groupDocRef.get();
-    String message = "added ";
+
+    List<String> gOriginalList = List<String>.from(groupDoc['groupMembers']);
     for (String members in selectedFriends) {
+      String addMessage = "added ";
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(members);
       DocumentSnapshot userDoc = await userDocRef.get();
-      userNameOfSelectedFriends.add(userDoc['firstName']);
-      String message2 = userDoc['firstName'];
-      message = "$message $message2";
+      addMessage = "$addMessage ${userDoc['firstName']}";
       List<String> originalList = List<String>.from(userDoc['groups']);
       originalList.add(widget.groupId!);
       await userDocRef.update({'groups': originalList});
-      List<String> gOriginalList = List<String>.from(groupDoc['groupMembers']);
       gOriginalList.add(members);
-      await groupDocRef.update({'groupMembers': gOriginalList});
-      setState(() {
-        fetchFriends();
-      });
+      sendMessageOrIcon(addMessage);
     }
-    sendMessageOrIcon(message);
+    await groupDocRef.update({'groupMembers': gOriginalList});
+    setState(() {
+      selectedFriends.clear();
+    });
   }
 
   void sendMessageOrIcon(String message) async {

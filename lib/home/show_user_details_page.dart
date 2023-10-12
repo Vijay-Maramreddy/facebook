@@ -80,11 +80,9 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
       String? id = widget.userId;
       DocumentReference documentReference = firestore.collection('users').doc(widget.userId);
 
-      if (!documentReference.isNull) {
-        await documentReference.update(updatedData);
-        Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(email: _emailController.text)));
-      }
-    } catch (e) {
+      await documentReference.update(updatedData);
+      Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(email: _emailController.text)));
+        } catch (e) {
       print("Error updating user details: $e");
       errorMessage = "An error occurred while updating user details";
       showAlert(context, errorMessage);
