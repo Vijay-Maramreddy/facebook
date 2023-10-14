@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:html';
 import 'dart:typed_data';
 
@@ -19,7 +20,7 @@ import '../base_page.dart';
 
 class GroupChatWidget extends StatefulWidget {
   final String? clickedGroupId;
-  final List<String> selectedGroupDocument;
+  final List<dynamic> selectedGroupDocument;
   const GroupChatWidget({super.key, required this.clickedGroupId, required this.selectedGroupDocument});
 
   @override
@@ -44,7 +45,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       groupName = widget.selectedGroupDocument[0];
       groupProfileImageUrl = widget.selectedGroupDocument[1];
       getGroupData(widget.clickedGroupId!);
-
+      makeMessageCountZero();
     });
     super.initState();
   }
@@ -188,7 +189,11 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         groupName = documentSnapshot.data()!['groupName'];
         groupDescription = documentSnapshot.data()!['description'];
         groupProfileImageUrl = documentSnapshot.data()!['groupProfileImageUrl'];
-        groupMembers = List<String>.from(documentSnapshot.data()!['groupMembers'] as List<dynamic>);
+        Map<String, dynamic> groupMembersMap = documentSnapshot.data()!['groupMembers'];
+        groupMembers = groupMembersMap.keys.toList();
+
+        // groupMembers =documentSnapshot.data()!['groupMembers'].keys.toList();
+
       });
     } else {
       print("Group not found for id: $clickedGroupId");
@@ -258,17 +263,21 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     String text = _messageController.text;
     if (text.isNotEmpty) {
       await interactionsCollection.add({
+        'seenStatus':false,
         'baseText':"",
         'interactedBy': currentUserId,
         'interactedWith': widget.clickedGroupId,
         'imageUrl': imageUrl,
-        'dateTime': formattedDateTime,
+        'dateTime': now,
         'message': text,
         'groupId': widget.clickedGroupId,
         'videoUrl': '',
         'visibility':true,
       });
       _messageController.clear();
+
+      increaseMessageCount();
+
     setState(() {}); // Clear the text field after sending the message
     }
   }
@@ -346,11 +355,12 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       User? user = FirebaseAuth.instance.currentUser;
       String? currentUserId = user?.uid;
       await interactionsCollection.add({
+        'seenStatus':false,
         'baseText':"",
         'interactedBy': currentUserId,
         'interactedWith': widget.clickedGroupId,
         'imageUrl': imageUrl,
-        'dateTime': dateTime,
+        'dateTime': now,
         'message': message,
         'groupId': widget.clickedGroupId,
         'videoUrl': '',
@@ -359,6 +369,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     } else {
       print('No image picked.');
     }
+    increaseMessageCount();
   }
 
   Future<String?> _showVideoPickerDialog(String? videoUrl) async {
@@ -441,12 +452,13 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       // String groupId = combineIds(currentUserId, widget.documentId);
       if (videoUrl != null) {
         await interactionsCollection.add({
+          'seenStatus':false,
           'baseText':"",
           'interactedBy': currentUserId,
           'interactedWith': widget.clickedGroupId,
           'videoUrl': videoUrl,
           'imageUrl': '',
-          'dateTime': dateTime,
+          'dateTime': now,
           'message': message,
           'groupId': widget.clickedGroupId,
           'visibility':true,
@@ -455,6 +467,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     } else {
       print('No video picked.');
     }
+    increaseMessageCount();
   }
 
   Future<String?> uploadVideoToStorage(String childName, XFile videoFile) async {
@@ -489,16 +502,18 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     await interactionsCollection.add({
+      'seenStatus':false,
       'baseText':"",
       'interactedBy': currentUserId,
       'interactedWith': widget.clickedGroupId,
       'imageUrl': '',
-      'dateTime': formattedDateTime,
+      'dateTime': now,
       'message': message,
       'groupId': widget.clickedGroupId,
       'videoUrl': '',
       'visibility':true,
     });
+    increaseMessageCount();
     // Clear the text field after sending the message
     _messageController.clear();
   }
@@ -515,6 +530,60 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     }
   }
 
+  Future<void> makeMessageCountZero() async {
+    User? user=FirebaseAuth.instance.currentUser;
+    String? currentUserId=user?.uid;
+    try {
+      CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
+      DocumentSnapshot groupDoc = await groupsCollection.doc(widget.clickedGroupId).get();
+
+      if (groupDoc.exists) {
+        Map<String, dynamic> groupData = groupDoc.data() as Map<String, dynamic>;
+        LinkedHashMap<String, dynamic> linkedMap = groupData['messageCount'];
+        Map<String, int> tempMessageCount = Map<String, int>.from(linkedMap);
+        if (tempMessageCount.containsKey(currentUserId)) {
+          tempMessageCount[currentUserId!] = 0;
+        }
+        // groupData['messageCount']=tempMessageCount;
+        await groupsCollection.doc(widget.clickedGroupId).update({
+          'messageCount': tempMessageCount,
+        });
+      } else {
+        print('Document with groupId ${widget.clickedGroupId} does not exist.');
+      }
+    } catch (e) {
+      print('Error updating messageCount: $e');
+    }
+  }
+
+  Future<void> increaseMessageCount() async {
+    User? user=FirebaseAuth.instance.currentUser;
+    String? currentUserId=user?.uid;
+    try {
+      CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
+      DocumentSnapshot groupDoc = await groupsCollection.doc(widget.clickedGroupId).get();
+
+      if (groupDoc.exists) {
+        Map<String, dynamic> groupData = groupDoc.data() as Map<String, dynamic>;
+        LinkedHashMap<String, dynamic> linkedMap = groupData['messageCount'];
+        Map<String, int> tempMessageCount = Map<String, int>.from(linkedMap);
+        tempMessageCount.forEach((key, value) {
+          if (key != currentUserId) {
+            tempMessageCount[key] = value + 1;
+          }
+        });
+        // groupData['messageCount']=tempMessageCount;
+        await groupsCollection.doc(widget.clickedGroupId).update({
+          'messageCount': tempMessageCount,
+        });
+      } else {
+        print('Document with groupId ${widget.clickedGroupId} does not exist.');
+      }
+    } catch (e) {
+      print('Error updating messageCount: $e');
+    }
+
+  }
 }
 
 

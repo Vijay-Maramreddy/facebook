@@ -16,7 +16,7 @@ class CreateGroupDialog extends StatefulWidget {
 }
 
 class _CreateGroupDialogState extends State<CreateGroupDialog> {
-  List<String> selectedFriends = [];
+  Map<String,DateTime> selectedFriends ={};
   String groupName = '';
   String groupDescription = '';
   late List<String> friendsUid;
@@ -66,7 +66,13 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     String? currentUserId = user?.uid;
     List<String> admins = [currentUserId!];
     String uuid = AppStyles.uuid();
-    selectedFriends.add(currentUserId);
+    selectedFriends[currentUserId]=DateTime.now();
+    // selectedFriends.add(currentUserId,DateTime.now());
+    Map<String, int> messageCount = {};
+    for (String selectedFriend in selectedFriends.keys) {
+      messageCount[selectedFriend] = 0;
+    }
+
     DateTime now = DateTime.now();
     String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
     String imageUrl = '';
@@ -84,11 +90,13 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
       'createdBy':currentUserId,
       'groupMembers': selectedFriends,
       'groupId': uid,
-      'dateTime': dateTime,
+      'dateTime': now,
+      'messageCount':messageCount,
+      'visibleDate':"none",
     };
     await groupsCollection.doc(uid).set(groupData);
 
-    for (var friend in selectedFriends) {
+    for (var friend in selectedFriends.keys) {
       DocumentReference friendDocRef = FirebaseFirestore.instance.collection('users').doc(friend);
 
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await friendDocRef.get() as DocumentSnapshot<Map<String, dynamic>>;
@@ -197,12 +205,12 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                       Text(item[1]),
                     ],
                   ),
-                  value: selectedFriends.contains(item[0]),
+                  value: selectedFriends.keys.contains(item[0]),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value != null) {
                         if (value) {
-                          selectedFriends.add(item[0]);
+                          selectedFriends[item[0]]=DateTime.now();
                         } else {
                           selectedFriends.remove(item[0]);
                         }
@@ -212,7 +220,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                 );
               }).toList(),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [

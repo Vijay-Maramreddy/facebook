@@ -22,7 +22,7 @@ class ChatWidget extends StatefulWidget {
   final String? selectedUserDetailsDocumentId;
   final String? groupId;
   final bool? isBlockedByYou;
-  const ChatWidget({super.key, this.selectedUserDetailsDocumentData, this.selectedUserDetailsDocumentId, this.groupId, required this.isBlockedByYou});
+  const ChatWidget({super.key, this.selectedUserDetailsDocumentData, this.selectedUserDetailsDocumentId, this.groupId, required this.isBlockedByYou,});
 
   @override
   State<ChatWidget> createState() => _ChatWidgetState();
@@ -30,28 +30,28 @@ class ChatWidget extends StatefulWidget {
 
 class _ChatWidgetState extends State<ChatWidget> {
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   Uint8List? image;
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   VideoPlayerController? _videoPlayerController;
 
+
+
   late int count;
   late final bool _isBlockedByYou = widget.isBlockedByYou!;
-  late List<String> oppositeBlocked=[];
+  late List<String> oppositeBlocked = [];
 
   @override
   void initState() {
     // TODO: implement initState
-
-
+    updateMessageSeenStatus();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     getOppositeBlockList();
-    print(widget.selectedUserDetailsDocumentId);
-    print("hi");
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     if (widget.selectedUserDetailsDocumentData == null) {
@@ -73,60 +73,61 @@ class _ChatWidgetState extends State<ChatWidget> {
           height: 650,
           child: Scaffold(
             body: Column(children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShowUserDetailsPage(
-                        userId: widget.selectedUserDetailsDocumentId,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.all(10.0),
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    border: Border.all(color: Colors.black),
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
 
-                  height: 60,
-                  // width: 1400,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.blue,
-                            width: 0.1,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ShowUserDetailsPage(
+                            userId: widget.selectedUserDetailsDocumentId,
                           ),
                         ),
-                        child: ClipOval(
-                          child: Image.network(
-                            widget.selectedUserDetailsDocumentData!['profileImageUrl'] ?? '',
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(10.0),
+                      padding: const EdgeInsets.all(10.0),
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+
+                      height: 60,
+                      // width: 1400,
+                      child: Row(
+                        children: [
+                          Container(
                             width: 30,
                             height: 30,
-                            fit: BoxFit.cover,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.blue,
+                                width: 0.1,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: Image.network(
+                                widget.selectedUserDetailsDocumentData!['profileImageUrl'] ?? '',
+                                width: 30,
+                                height: 30,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(
+                            width: 20,
+                          ),
+                          Text(
+                            widget.selectedUserDetailsDocumentData!['firstName'] ?? '',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ],
                       ),
-                      const SizedBox(
-                        width: 20,
-                      ),
-                      Text(
-                        widget.selectedUserDetailsDocumentData!['firstName'] ?? '',
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
               Column(
                 children: [
                   SingleChildScrollView(
@@ -134,12 +135,12 @@ class _ChatWidgetState extends State<ChatWidget> {
                     child: SizedBox(
                       height: 500,
                       child: Center(
-                        child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.selectedUserDetailsDocumentId, groupId: widget.groupId,oppositeBlocked:oppositeBlocked,youBlocked:_isBlockedByYou),
+                        child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.selectedUserDetailsDocumentId, groupId: widget.groupId,oppositeBlocked:oppositeBlocked,youBlocked:_isBlockedByYou,),
                       ),
                     ),
                   ),
                   Visibility(
-                    visible: (!_isBlockedByYou)&&(!oppositeBlocked.contains(currentUserId)),
+                    visible: (!_isBlockedByYou) && (!oppositeBlocked.contains(currentUserId)),
                     child: Row(children: [
                       Container(
                         decoration: customBoxDecoration,
@@ -226,15 +227,16 @@ class _ChatWidgetState extends State<ChatWidget> {
       String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
       if (imageUrl != null) {
         await interactionsCollection.add({
-          'baseText':"",
+          'seenStatus': false,
+          'baseText': "",
           'interactedBy': currentUserId,
           'interactedWith': widget.selectedUserDetailsDocumentId,
           'imageUrl': imageUrl,
-          'dateTime': dateTime,
+          'dateTime': now,
           'message': message,
           'groupId': groupId,
           'videoUrl': '',
-          'visibility':!_isBlockedByYou,
+          'visibility': !_isBlockedByYou,
         });
       }
     } else {
@@ -319,20 +321,21 @@ class _ChatWidgetState extends State<ChatWidget> {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+    // String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
     await interactionsCollection.add({
-      'baseText':"",
+      'seenStatus': false,
+      'baseText': "",
       'interactedBy': currentUserId,
       'interactedWith': widget.selectedUserDetailsDocumentId,
       'imageUrl': '',
-      'dateTime': formattedDateTime,
+      'dateTime': now,
       'message': message,
       'groupId': groupId,
       'videoUrl': '',
-      'visibility':!_isBlockedByYou,
+      'visibility': !_isBlockedByYou,
     });
     // Clear the text field after sending the message
     _messageController.clear();
@@ -422,15 +425,16 @@ class _ChatWidgetState extends State<ChatWidget> {
       String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
       if (videoUrl != null) {
         await interactionsCollection.add({
-          'baseText':"",
+          'seenStatus': false,
+          'baseText': "",
           'interactedBy': currentUserId,
           'interactedWith': widget.selectedUserDetailsDocumentId,
           'videoUrl': videoUrl,
           'imageUrl': '',
-          'dateTime': dateTime,
+          'dateTime': now,
           'message': message,
           'groupId': groupId,
-          'visibility':!_isBlockedByYou,
+          'visibility': !_isBlockedByYou,
         });
       }
     } else {
@@ -490,7 +494,7 @@ class _ChatWidgetState extends State<ChatWidget> {
             Expanded(
               child: EmojiPicker(
                 onEmojiSelected: (category, emoji) {
-                  if(mounted) {
+                  if (mounted) {
                     setState(() {
                       _messageController.text += emoji.emoji;
                     });
@@ -528,35 +532,52 @@ class _ChatWidgetState extends State<ChatWidget> {
     String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
     if (text.isNotEmpty) {
       await interactionsCollection.add({
-        'baseText':"",
+        'seenStatus': false,
+        'baseText': "",
         'interactedBy': currentUserId,
         'interactedWith': widget.selectedUserDetailsDocumentId,
         'imageUrl': imageUrl,
-        'dateTime': formattedDateTime,
+        'dateTime': now,
         'message': text,
         'groupId': groupId,
         'videoUrl': '',
-        'visibility':!_isBlockedByYou,
+        'visibility': !_isBlockedByYou,
       });
       _messageController.clear();
     }
   }
 
-
   Future<void> getOppositeBlockList() async {
-    print(widget.selectedUserDetailsDocumentId);
     DocumentReference documentReference = FirebaseFirestore.instance.collection('users').doc(widget.selectedUserDetailsDocumentId);
     DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
-    print(documentSnapshot.data());
-    if (documentSnapshot.data()!= null) {
+    if (documentSnapshot.data() != null) {
       List<String> blockedData = List<String>.from(documentSnapshot.data()!['blocked']);
 
       if (blockedData != null) {
         oppositeBlocked = List<String>.from(blockedData);
       }
-    }
-    else {
+    } else {
       print("document snapshot of opposite user is empty");
+    }
+  }
+
+  Future<void> updateMessageSeenStatus() async {
+    CollectionReference interactions = FirebaseFirestore.instance.collection('interactions');
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+
+    // Query documents where the 'interactedWith' field is equal to uid
+    QuerySnapshot querySnapshot =
+        await interactions.where('groupId', isEqualTo: widget.groupId).where('interactedWith', isEqualTo: currentUserId).get();
+
+    for (QueryDocumentSnapshot document in querySnapshot.docs) {
+      interactions.doc(document.id).update({
+        'seenStatus': true,
+      }).then((_) {
+        print('Document ${document.id} updated successfully.');
+      }).catchError((error) {
+        print('Error updating document: $error');
+      });
     }
   }
 }

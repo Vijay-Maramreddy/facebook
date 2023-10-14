@@ -128,7 +128,7 @@ class _ReelsPageState extends State<ReelsPage> {
           'message': message,
           'likes': 0,
           'likedBy': [],
-          'shareCount':0,
+          'sharesCount':0,
         });
       }
     } else {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:html';
+import 'dart:js_interop';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,13 +15,16 @@ class AllInteractions extends StatefulWidget {
   late String? groupId;
   late List<String> oppositeBlocked;
   late bool youBlocked;
+  late String? string;
   AllInteractions(
       {super.key,
       required this.interactedBy,
       required this.interactedWith,
       required this.groupId,
       required this.oppositeBlocked,
-      required this.youBlocked});
+      required this.youBlocked,
+        this.string,
+      });
 
   @override
   State<AllInteractions> createState() => _AllInteractionsState();
@@ -31,22 +35,27 @@ class _AllInteractionsState extends State<AllInteractions> {
   String interactedByUserFirstName = "";
   String interactedWithUserFirstName = "";
   String interactedByUserProfileImageUrl = "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
+  String string="";
+
+  late DateTime startDate=DateTime.now();
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     fetchMessengerDetails(widget.groupId);
-    var blocked = widget.oppositeBlocked;
+    // var blocked = widget.oppositeBlocked;
   }
 
   @override
   Widget build(BuildContext context) {
+    print(startDate);
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('interactions')
           .where('groupId', isEqualTo: widget.groupId)
-          .where('visibility', isEqualTo: true) // Adjust this condition as needed
+          .where('visibility', isEqualTo: true)
+          .where('dateTime', isGreaterThanOrEqualTo: startDate)// Adjust this condition as needed
           .orderBy('dateTime')
           .snapshots(),
       builder: (context, snapshot) {
@@ -106,6 +115,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                     }
                 }
               return Visibility(
+                visible: (string==""||string.isEmpty||string.isNull)?true:data['message'].contains(string),
                 child: Column(
                   children: [
                     if(data['baseText']!="")
@@ -124,7 +134,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                               padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                               child: Text("$msg1 $msg3 $msg2")
                           ),
-                          Text(data['dateTime']),
+                          Text("${data['dateTime'].toDate()}"),
                           const SizedBox(
                             height: 20,
                           )
@@ -134,136 +144,150 @@ class _AllInteractionsState extends State<AllInteractions> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          if (urlString != "")
-                            Column(children: [
-                              Container(
-                                width: 550,
-                                height: 330,
-                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                child: VideoContainer(
-                                  alignment: 'right',
-                                  videoUrl: urlString,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                child: Text(data['message']),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                child: Text(data['dateTime']),
-                              ),
-                            ])
-                          else if (data['imageUrl'] == "" && urlString == "")
-                            if (data['message']!.startsWith('https://'))
-                              Column(children: [
-                                MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      window.open(data['message']!, '_blank');
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                      child: Text(
-                                        data['message'],
-                                        style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: Text(data['dateTime']),
-                                ),
-                              ])
-                            else
-                              Column(children: [
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                  child: Text(data['message']),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: Text(data['dateTime']),
-                                ),
-                              ])
-                          else
-                            Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                  child: Image.network(
-                                    data['imageUrl'],
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                                  child: Text(data['message']),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: Text(data['dateTime']),
-                                )
-                              ],
-                            ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ShowUserDetailsPage(
-                                    userId: data['interactedBy'],
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.all(10.0),
-                              padding: const EdgeInsets.all(10.0),
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                border: Border.all(color: Colors.black),
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-
-                              height: 60,
-                              // width: 1400,
-                              child: Row(
-                                children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (urlString != "")
+                                Column(children: [
                                   Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.blue,
-                                        width: 0.1,
+                                    width: 550,
+                                    height: 330,
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    child: VideoContainer(
+                                      alignment: 'right',
+                                      videoUrl: urlString,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    child: Text(data['message']),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                    child: Text("${data['dateTime'].toDate()}"),
+                                  ),
+                                ])
+                              else if (data['imageUrl'] == "" && urlString == "")
+                                if (data['message']!.startsWith('https://'))
+                                  Column(children: [
+                                    MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          window.open(data['message']!, '_blank');
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                          child: Text(
+                                            data['message'],
+                                            style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    child: ClipOval(
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                      child: Text("${data['dateTime'].toDate()}"),
+                                    ),
+                                  ])
+                                else
+                                  Column(children: [
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                      child: Text(data['message']),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                      child: Text("${data['dateTime'].toDate()}"),
+                                    ),
+                                  ])
+                              else
+                                Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                                       child: Image.network(
-                                        interactedByUserProfileImageUrl ?? '',
-                                        width: 30,
-                                        height: 30,
+                                        data['imageUrl'],
+                                        width: 100,
+                                        height: 100,
                                         fit: BoxFit.cover,
                                       ),
                                     ),
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                      child: Text(data['message']),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                      child: Text("${data['dateTime'].toDate()}"),
+                                    )
+                                  ],
+                                ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ShowUserDetailsPage(
+                                        userId: data['interactedBy'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.all(10.0),
+                                  padding: const EdgeInsets.all(10.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    border: Border.all(color: Colors.black),
+                                    borderRadius: BorderRadius.circular(10.0),
                                   ),
-                                  const SizedBox(
-                                    width: 20,
+
+                                  height: 60,
+                                  // width: 1400,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.blue,
+                                            width: 0.1,
+                                          ),
+                                        ),
+                                        child: ClipOval(
+                                          child: Image.network(
+                                            interactedByUserProfileImageUrl,
+                                            width: 30,
+                                            height: 30,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 20,
+                                      ),
+                                      Text(
+                                        interactedByUserFirstName,
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    interactedByUserFirstName ?? '',
-                                    style: const TextStyle(fontSize: 20),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
+                            ],
                           ),
+                          if(data['seenStatus']==false)
+                            const Icon(Icons.check)
+                          else
+                            const Row(
+                              children: [
+                                Icon( Icons.check,color: Colors.blue),
+                                Icon( Icons.check,color: Colors.blue),
+                              ],
+                            )
                         ],
                       )
                     else if (data['interactedBy'] != widget.interactedBy)
@@ -307,7 +331,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                       ),
                                       child: ClipOval(
                                         child: Image.network(
-                                          interactedByUserProfileImageUrl ?? '',
+                                          interactedByUserProfileImageUrl,
                                           width: 30,
                                           height: 30,
                                           fit: BoxFit.cover,
@@ -318,7 +342,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                       width: 20,
                                     ),
                                     Text(
-                                      interactedByUserFirstName ?? '',
+                                      interactedByUserFirstName,
                                       style: const TextStyle(fontSize: 20),
                                     ),
                                   ],
@@ -345,7 +369,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                 Container(
                                   alignment: Alignment.centerLeft,
                                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: Text(data['dateTime']),
+                                  child: Text("${data['dateTime'].toDate()}"),
                                 ),
                               ])
                             else if (data['imageUrl'] == "")
@@ -370,7 +394,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   Container(
                                     alignment: Alignment.centerLeft,
                                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                    child: Text(data['dateTime']),
+                                    child: Text("${data['dateTime'].toDate()}"),
                                   ),
                                 ])
                               else
@@ -383,7 +407,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   Container(
                                     alignment: Alignment.centerLeft,
                                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                    child: Text(data['dateTime']),
+                                    child: Text("${data['dateTime'].toDate()}"),
                                   ),
                                 ])
                             else
@@ -407,7 +431,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   Container(
                                     alignment: Alignment.centerLeft,
                                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                    child: Text(data['dateTime']),
+                                    child: Text("${data['dateTime'].toDate()}"),
                                   )
                                 ],
                               ),
@@ -453,16 +477,43 @@ class _AllInteractionsState extends State<AllInteractions> {
     CollectionReference groupCollection = FirebaseFirestore.instance.collection('Groups');
     var userDocumentSnapshot = await groupCollection.doc(data).get();
 
+
+
     List<String> userMembers = [];
 
     if (userDocumentSnapshot.exists) {
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
-      if (userDocument['groupMembers'] != null) {
-        userMembers = List<String>.from(userDocument['groupMembers']);
+      String visibleDate=userDocument['visibleDate'];
+      DateTime groupStarted=userDocument['dateTime'].toDate();
+      if(visibleDate=="none")
+        {
+          startDate=groupStarted;
+        }
+      else if(visibleDate=="1 week")
+        {
+          startDate=DateTime.now().subtract(const Duration(days: 7));
+        }
+      else if(visibleDate=="1 month")
+      {
+        startDate=DateTime.now().subtract(const Duration(days: 30));
       }
-    } else {
-      userMembers = data.split('-');
+      if (userDocument['groupMembers'] != null) {
+        Map<String, dynamic> groupMembersMap = userDocument['groupMembers'];
+        userMembers = groupMembersMap.keys.toList();
+        // userMembers = List<String>.from(userDocument['groupMembers']);
+      }
     }
+    else {
+      userMembers = data.split('-');
+      CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+      var userDocumentSnapshot = await usersCollection.doc(userMembers[0]).get();
+      var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
+      startDate=DateTime.parse(userDocument['dateTime'] as String);
+
+    }
+    setState(() {
+      startDate;
+    });
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
 
     for (String userMember in userMembers) {

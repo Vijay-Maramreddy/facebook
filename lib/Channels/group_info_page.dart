@@ -31,10 +31,16 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
 
   late List<String> selectedFriends = [];
   late List<List<String>> friendsData = [];
+  late String currentUserId="";
+
+  String selectedDropdownValue = 'none'; // Default selected value
+
+  List<String> dropdownOptions = ['none', '1 day', '1 week', '1 month'];
 
   List<String> admins = [];
   List<String> selectedAdmins = [];
   List<String> selectedGroupMembers = [];
+  Map<String,DateTime> originalGroupMembers={};
   List<String> groupMembers = [];
   Map<String, List<String>> mapOfLists = {};
   String superAdmin = "";
@@ -44,7 +50,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   Uint8List? _image;
   late String imageUrl;
   late String loadImageUrl = 'https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png';
-  String formattedDateTime = "";
+  DateTime formattedDateTime = DateTime.now();
   String createdUserProfileImageUrl =
       "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
 
@@ -153,6 +159,32 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
               ],
             ),
             Text("Created on :$formattedDateTime"),
+            Visibility(
+              visible: superAdmin==currentUserId,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Select the Message Visibility"),
+                  const SizedBox(width: 20,),
+                  DropdownButton<String>(
+                    value: selectedDropdownValue,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedDropdownValue = newValue!;
+                        print(selectedDropdownValue);
+                        handleDropdownSelection(selectedDropdownValue);
+                      });
+                    },
+                    items: dropdownOptions.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
             Form(
               key: _formKey,
               child: Column(
@@ -230,8 +262,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                 shrinkWrap: true,
                 itemCount: groupMembers.length,
                 itemBuilder: (context, index) {
-                  User? user = FirebaseAuth.instance.currentUser;
-                  String? currentUserId = user?.uid;
+                  // User? user = FirebaseAuth.instance.currentUser;
+                  // String? currentUserId = user?.uid;
                   final isAdminSuperAdmin = currentUserId == superAdmin;
                   final isChecked = selectedAdmins.contains(groupMembers[index]);
                   if (!isAdminSuperAdmin && !selectedAdmins.contains(groupMembers[index])) {
@@ -326,8 +358,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                 shrinkWrap: true,
                 itemCount: groupMembers.length,
                 itemBuilder: (context, index) {
-                  User? user = FirebaseAuth.instance.currentUser;
-                  String? currentUserId = user?.uid;
+                  // User? user = FirebaseAuth.instance.currentUser;
+                  // String? currentUserId = user?.uid;
                   final isAdmin = admins.contains(currentUserId);
                   final isChecked = selectedGroupMembers.contains(groupMembers[index]);
                   return ListTile(
@@ -385,9 +417,9 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                               setState(() {
                                 if (value != null) {
                                   if (value) {
-                                    selectedGroupMembers.add(groupMembers[index]);
+                                    originalGroupMembers[groupMembers[index]]=DateTime.now();
                                   } else {
-                                    selectedGroupMembers.remove(groupMembers[index]);
+                                    originalGroupMembers.remove(groupMembers[index]);
                                   }
                                 }
                               });
@@ -429,7 +461,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('Groups');
     var userDocument = await usersCollection.doc(widget.groupId).get();
     User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
+    currentUserId = user!.uid;
     String createdUserId = userDocument['createdBy'];
     CollectionReference createdUsersCollection = FirebaseFirestore.instance.collection('users');
     var createdUserDocument = await createdUsersCollection.doc(createdUserId).get();
@@ -438,13 +470,14 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         _groupNameController.text = userDocument['groupName'] ?? '';
         _descriptionController.text = userDocument['description'] ?? '';
         loadImageUrl = userDocument['groupProfileImageUrl'] ?? '';
-        DateTime dateTime = DateTime.parse(userDocument['dateTime']);
-        formattedDateTime = dateTime.toString();
+        DateTime dateTime = userDocument['dateTime'].toDate();
+        formattedDateTime = dateTime;
         createdUserId = userDocument['createdBy'];
         createdBy = createdUserDocument['firstName'];
         createdUserProfileImageUrl = createdUserDocument['profileImageUrl'];
         superAdmin = userDocument['superAdmin'];
-        groupMembers = List<String>.from(userDocument['groupMembers']);
+        originalGroupMembers=userDocument['groupMembers'];
+        groupMembers = List<String>.from(userDocument['groupMembers'].keys);
         fetchFriends();
         admins = List<String>.from(userDocument['admin']);
 
@@ -480,12 +513,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       'description': _descriptionController.text,
       'groupProfileImageUrl': imageUrl,
       'admin': selectedAdmins,
-      'groupMembers': selectedGroupMembers,
+      'groupMembers': originalGroupMembers,
     };
 
     String? message1 = "";
     List<String> tempGroupMembers = groupMembers;
-    groupMembers.removeWhere((element) => selectedGroupMembers.contains(element));
+    groupMembers.removeWhere((element) => originalGroupMembers.keys.contains(element));
     String message = "removed group members ";
     for (String members in tempGroupMembers) {
       message1 = mapOfLists[members]?[0];
@@ -526,7 +559,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       DocumentReference documentReference = firestore.collection('Groups').doc(widget.groupId);
       await documentReference.update(updatedData);
       Navigator.pop(context);
-      compareLists(groupMembers, selectedGroupMembers);
+      compareLists(groupMembers, originalGroupMembers.keys as List<String>);
     } catch (e) {
       print("Error updating user details: $e");
       String errorMessage = "An error occurred while updating user details";
@@ -542,14 +575,20 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     return downloadUrl;
   }
 
+
   Future<void> exitGroup() async {
+
+
+
     String? id = widget.groupId;
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
+
+    String msg="has Exited the group";
+    sendMessageOrIcon(msg);
+
     DocumentReference groupDocRef = FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
     DocumentSnapshot groupDoc = await groupDocRef.get();
     if (groupDoc.exists) {
-      List<String> originalList = List<String>.from(groupDoc['groupMembers']);
+      Map<String,DateTime> originalList = groupDoc['groupMembers'];
       originalList.remove(currentUserId);
       await groupDocRef.update({'groupMembers': originalList});
     } else {
@@ -568,14 +607,15 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     Navigator.pop(context);
   }
 
+
   Future<void> fetchMessengerDetails(data) async {
     CollectionReference groupCollection = FirebaseFirestore.instance.collection('Groups');
     var userDocumentSnapshot = await groupCollection.doc(data).get();
     List<String> userMembers = [];
     if (userDocumentSnapshot.exists) {
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
-      if (userDocument['groupMembers'] != null) {
-        userMembers = List<String>.from(userDocument['groupMembers']);
+      if (userDocument['groupMembers'].keys != null) {
+        userMembers = List<String>.from(userDocument['groupMembers'].keys);
       }
     } else {
       userMembers = data.split('-');
@@ -598,15 +638,9 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   void compareLists(List<String> list1, List<String> list2) {
     for (String element in list1) {
       if (!list2.contains(element)) {
-        // Call function1 with the element
         function1(element);
       }
     }
-    // for (String element in list2) {
-    //   if (!list1.contains(element)) {
-    //     function2(element);
-    //   }
-    // }
   }
 
   Future<void> function1(String element) async {
@@ -634,84 +668,86 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       showDialog(
         context: currentContext,
         builder: (context) {
-          return Dialog(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: friendsData.map((item) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.blue,
-                                  width: 0.1,
+          return Dialog(child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: friendsData.map((item) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.blue,
+                                    width: 0.1,
+                                  ),
+                                ),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    item[2],
+                                    width: 30,
+                                    height: 30,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
-                              child: ClipOval(
-                                child: Image.network(
-                                  item[2],
-                                  width: 30,
-                                  height: 30,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            Text(item[1]),
-                          ],
-                        ),
-                        Checkbox(
-                          value: isSelected(item),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              if (value != null) {
-                                if (value) {
-                                  selectedFriends.add(item[0]);
-                                } else {
-                                  selectedFriends.remove(item[0]);
+                              Text(item[1]),
+                            ],
+                          ),
+                          Checkbox(
+                            value: isSelected(item),
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value != null) {
+                                  if (value) {
+                                    originalGroupMembers[item[0]]=DateTime.now();
+                                  } else {
+                                    originalGroupMembers.remove(item[0]);
+                                  }
                                 }
-                              }
-                              print("Selected New Friends $selectedFriends");
-                            });
-                          },
-                        )
-                      ],
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(currentContext);
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        addSelectedFriendsToGroup();
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Add'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
+                                print("Selected New Friends $originalGroupMembers");
+                              });
+                            },
+                          )
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(currentContext);
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: () {
+                          addSelectedFriendsToGroup();
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ));
         },
       );
     }
@@ -777,14 +813,41 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       sendMessageOrIcon(addMessage);
     }
     await groupDocRef.update({'groupMembers': gOriginalList});
+
+    try {
+      // Retrieve the existing group data from Firestore
+      DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+          .collection('Groups')
+          .doc(widget.groupId)
+          .get();
+      if (documentSnapshot.exists) {
+        Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
+        Map<String, int> groupData = {};
+        if (data['messageCount'] != null) {
+          groupData = Map<String, int>.from(data['messageCount']);
+        }
+        for (String members in selectedFriends) {
+          groupData[members] = 0;
+        }
+        await FirebaseFirestore.instance
+            .collection('Groups')
+            .doc(widget.groupId)
+            .update({'groupData': groupData});
+      } else {
+        print('Document does not exist');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+
     setState(() {
       selectedFriends.clear();
     });
   }
 
   void sendMessageOrIcon(String message) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
+    // User? user = FirebaseAuth.instance.currentUser;
+    // String? currentUserId = user?.uid;
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
@@ -793,10 +856,11 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     // String groupId = combineIds(currentUserId, widget.groupId);
     if (message.isNotEmpty) {
       await interactionsCollection.add({
+        'seenStatus':false,
         'interactedBy': currentUserId,
         'interactedWith': widget.groupId,
         'imageUrl': imageUrl,
-        'dateTime': formattedDateTime,
+        'dateTime': now,
         'message': "",
         'groupId': widget.groupId,
         'videoUrl': '',
@@ -805,4 +869,21 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       });
     }
   }
+
+  void handleDropdownSelection(String selectedValue) {
+    // Perform actions based on the selected value
+    switch (selectedValue) {
+      case 'none':
+        break;
+      case '1 day':
+        break;
+      case '1 week':
+        break;
+      case '1 month':
+        break;
+      default:
+        break;
+    }
+  }
+
 }

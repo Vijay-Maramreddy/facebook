@@ -1,4 +1,3 @@
-import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -626,6 +625,7 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     String groupId = combineIds(currentUserId, widget.userId);
     if (message.isNotEmpty) {
       await interactionsCollection.add({
+        'seenStatus':false,
         'interactedBy': currentUserId,
         'interactedWith': widget.userId,
         'imageUrl': imageUrl,

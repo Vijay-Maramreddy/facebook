@@ -28,6 +28,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
   Map<String, List<String>> userDataMap = {};
 
 
+  @override
   void initState() {
     super.initState();
     User? user = FirebaseAuth.instance.currentUser;
@@ -43,7 +44,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('reels')
-            .orderBy('dateTime', descending: true) // Order by dateTime in descending order
+            .orderBy('dateTime', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -71,7 +72,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
                     future: getProfileDetails(postUserId),
                     builder: (context, profileDetailsSnapshot) {
                       if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
-                        return CircularProgressIndicator();
+                        return const CircularProgressIndicator();
                       } else if (profileDetailsSnapshot.hasError) {
                         return Text('Error: ${profileDetailsSnapshot.error}');
                       } else {
@@ -283,7 +284,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
                                               },
                                             ),
 
-                                            Text('${document['sharesCount']}',style:TextStyle(color: Colors.blue),),
+                                            Text('${document['sharesCount']}',style:const TextStyle(color: Colors.blue),),
                                           ],
                                         ),
                                       ],

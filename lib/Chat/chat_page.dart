@@ -1,4 +1,7 @@
+import 'dart:collection';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:facebook/home/home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../Channels/creating_a_channel.dart';
@@ -23,10 +26,11 @@ class _ChatPageState extends State<ChatPage> {
   Map<String, int> resultMap = {};
   List<String> blockedList = [];
   List<String> groupUids = [];
-  List<List<String>> groupsInfo = [];
+  List<List<dynamic>> groupsInfo = [];
   late bool isGroup = false;
   String clickedGroupId = "";
-  List<String> selectedGroupDocument = [];
+  List<dynamic> selectedGroupDocument = [];
+  late String currentUserEmail="";
 
   @override
   void initState() {
@@ -63,6 +67,13 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat Page'),
+            leading: IconButton(
+                icon:Icon(Icons.arrow_back),
+                onPressed: () {
+                  // Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen(email:currentUserEmail)));
+                },
+            ),
       ),
       body: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -237,10 +248,11 @@ class _ChatPageState extends State<ChatPage> {
                               child: ListView.builder(
                                 itemCount: groupsInfo.length,
                                 itemBuilder: (context, index) {
-                                  List<String> groupData = groupsInfo[index];
+                                  List<dynamic> groupData = groupsInfo[index];
                                   String name = groupData[0];
                                   String profileImageUrl = groupData[1];
                                   String groupId = groupData[2];
+                                  int unSeenCount=groupData[3];
                                   return Padding(
                                     padding: const EdgeInsets.all(10),
                                     child: ElevatedButton(
@@ -249,6 +261,7 @@ class _ChatPageState extends State<ChatPage> {
                                           clickedGroupId = groupId;
                                           isGroup = true;
                                           selectedGroupDocument = groupData; // Update selectedGroupDocument
+                                          groupData[3]=0;
                                         });
                                       },
                                       child: Container(
@@ -289,6 +302,8 @@ class _ChatPageState extends State<ChatPage> {
                                                 style: const TextStyle(fontSize: 26),
                                               ),
                                             ),
+                                            if(groupData[3]>0)
+                                              Text("(${groupData[3]})",style: const TextStyle(color: Colors.red)),
                                           ],
                                         ),
                                       ),
@@ -315,7 +330,8 @@ class _ChatPageState extends State<ChatPage> {
                       selectedUserDetailsDocumentData: selectedUserDetailsDocumentData,
                       selectedUserDetailsDocumentId: selectedUserDetailsDocumentId,
                       groupId: groupId,
-                      isBlockedByYou: blockedList.contains(selectedUserDetailsDocumentId)),
+                      isBlockedByYou: blockedList.contains(selectedUserDetailsDocumentId)
+                  ),
                 ),
               ),
             ),
@@ -409,12 +425,17 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> getBlockedList() async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
+
     DocumentReference documentReference = FirebaseFirestore.instance.collection('users').doc(currentUserId);
+
     DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
+    currentUserEmail=documentSnapshot.data()?['email'];
     blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
   }
 
   Future<void> getAllGroupInfo(List<String> groupUids) async {
+    User? user=FirebaseAuth.instance.currentUser;
+    String? currentUserId=user?.uid;
     for (var group in groupUids) {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(group).get();
       if (documentSnapshot.exists) {
@@ -422,7 +443,8 @@ class _ChatPageState extends State<ChatPage> {
         String name = data['groupName'];
         String profileImageUrl = data['groupProfileImageUrl'];
         String groupId = data['groupId'];
-        List<String> groupData = [name, profileImageUrl, groupId];
+        int noOfUnseenMessages=data['messageCount'][currentUserId];
+        List<dynamic> groupData = [name, profileImageUrl, groupId,noOfUnseenMessages];
         setState(() {
           groupsInfo.add(groupData);
         });

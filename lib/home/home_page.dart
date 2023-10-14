@@ -6,6 +6,7 @@ import 'package:facebook/main.dart';
 import 'package:facebook/reels/reels_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -71,7 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(title: "FaceBook ($newMessagesCount)",
+    return MaterialApp(
+      title: "FaceBook ($newMessagesCount)",
       home: Scaffold(
         backgroundColor: Colors.lightBlueAccent,
         body: Column(
@@ -101,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => FriendRequestPage(),
+                        builder: (context) => const FriendRequestPage(),
                       ),
                     );
                   },
@@ -112,7 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Colors.white, // Customize the color as needed
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const ReelsPage()));
-                    // Add your left-end icon onPressed functionality here.
                   },
                 ),
                 Row(
@@ -123,11 +124,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white, // Customize the color as needed
                       onPressed: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage()));
-                        // Add your left-end icon onPressed functionality here.
                       },
                     ),
-                    if(newMessagesCount>0)
-                    Text("$newMessagesCount", style: TextStyle(color: Colors.red)),
+                    if (newMessagesCount > 0) Text("$newMessagesCount", style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ],
@@ -386,11 +385,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.clear();
       await _auth.signOut();
-      // Navigate to the login or home page after sign out
-      // Replace with the appropriate route in your app
-      Navigator.push(context, MaterialPageRoute(builder: (context) => openScreen()));
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const openScreen()));
     } catch (e) {
-      print('Error during sign out: $e');
+      if (kDebugMode) {
+        print('Error during sign out: $e');
+      }
     }
   }
 
@@ -401,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, int commentsCount, String dateTime,
-      List<String> likedBy, String profileImageUrl, String firstName, bool status,int shareCount) async {
+      List<String> likedBy, String profileImageUrl, String firstName, bool status, int shareCount) async {
     final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
 
     // Add a new document to the 'images' collection
@@ -416,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'profileImageUrl': profileImageUrl,
       'firstName': firstName,
       'status': status,
-      'sharesCount':shareCount,
+      'sharesCount': shareCount,
     });
   }
 
@@ -435,10 +434,10 @@ class _HomeScreenState extends State<HomeScreen> {
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
-      int shareCount=0;
+      int shareCount = 0;
       if (imageUrl != null) {
         // Use the Firebase auth user's UID as the user ID
-        CollectionReference usersCollection = await FirebaseFirestore.instance.collection('users');
+        CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
         // // Query the collection to find documents that match the provided mobile number
         // DocumentSnapshot documentSnapshot = await usersCollection.doc(user.uid).get();
         User? user = FirebaseAuth.instance.currentUser;
@@ -450,22 +449,31 @@ class _HomeScreenState extends State<HomeScreen> {
               profileImageUrl = data['profileImageUrl'];
               firstName = data['firstName'];
             } else {
-              print('Document data is null.');
+              if (kDebugMode) {
+                print('Document data is null.');
+              }
             }
           } else {
             String message = "user details not found";
             showAlert(context, message);
           }
-          await addImageUrlToFirebase(user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status,shareCount);
+          await addImageUrlToFirebase(
+              user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status, shareCount);
           setState(() {});
         } else {
-          print('Error: User is not authenticated.');
+          if (kDebugMode) {
+            print('Error: User is not authenticated.');
+          }
         }
       } else {
-        print('Error uploading image.');
+        if (kDebugMode) {
+          print('Error uploading image.');
+        }
       }
     } else {
-      print('No image picked.');
+      if (kDebugMode) {
+        print('No image picked.');
+      }
     }
   }
 
@@ -542,14 +550,16 @@ class _HomeScreenState extends State<HomeScreen> {
     DocumentSnapshot? userDocument = await getDocumentByFirstName(firstName);
 
     if (userDocument != null) {
-      print('User found');
+      if (kDebugMode) {
+        print('User found');
+      }
     } else {
-      print('No user found with the specified first name.');
+      if (kDebugMode) {
+        print('No user found with the specified first name.');
+      }
     }
     return userDocument;
   }
-
-  // import 'package:cloud_firestore/cloud_firestore.dart';
 
   Future<DocumentSnapshot?> getDocumentByFirstName(String firstName) async {
     try {
@@ -563,7 +573,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return null;
       }
     } catch (e) {
-      print('Error retrieving document by first name: $e');
+      if (kDebugMode) {
+        print('Error retrieving document by first name: $e');
+      }
       return null;
     }
   }
@@ -585,13 +597,24 @@ class _HomeScreenState extends State<HomeScreen> {
     CollectionReference<Map<String, dynamic>> collectionRef = FirebaseFirestore.instance.collection('messageCount');
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await collectionRef.get();
     for (QueryDocumentSnapshot<Map<String, dynamic>> document in querySnapshot.docs) {
-      if (document.data()!['interactedTo'] == currentUserId) {
-        setState(() {
-          newMessagesCount += document.data()['count']! as int;
-        });
+      if (document.data()['interactedTo'] == currentUserId) {
+        newMessagesCount += document.data()['count']! as int;
       }
     }
+    final CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+    DocumentSnapshot userDocument = await usersCollection.doc(currentUserId).get();
+    List<String>? groups = (userDocument.get('groups') as List?)
+        ?.map((dynamic group) => group.toString())
+        .toList();
+    for(String groupId in groups!){
+      DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(groupId).get();
+      if (documentSnapshot.exists) {
+        Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
+        newMessagesCount+=data['messageCount'][currentUserId] as int;
+      }
+    }
+    setState(() {
+      newMessagesCount;
+    });
   }
-
-
 }
