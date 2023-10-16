@@ -67,7 +67,6 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     List<String> admins = [currentUserId!];
     String uuid = AppStyles.uuid();
     selectedFriends[currentUserId]=DateTime.now();
-    // selectedFriends.add(currentUserId,DateTime.now());
     Map<String, int> messageCount = {};
     for (String selectedFriend in selectedFriends.keys) {
       messageCount[selectedFriend] = 0;
@@ -77,7 +76,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
     String imageUrl = '';
     if (_image != null) {
-      imageUrl = await uploadImageToStorage('groupImage/' + uuid, _image!);
+      imageUrl = await uploadImageToStorage('groupImage/$uuid', _image!);
     }
     CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
     String uid = AppStyles.uuid();
@@ -164,18 +163,18 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                     children: [
                       TextField(
                         onChanged: (value) => groupName = value,
-                        decoration: InputDecoration(labelText: 'Group Name'),
+                        decoration: const InputDecoration(labelText: 'Group Name'),
                       ),
                       TextField(
                         onChanged: (value) => groupDescription = value,
-                        decoration: InputDecoration(labelText: 'Group Description'),
+                        decoration: const InputDecoration(labelText: 'Group Description'),
                       ),
                     ],
                   ),
                 )
               ],
             ),
-            SizedBox(
+            const SizedBox(
               height: 20,
             ),
             Column(
@@ -228,12 +227,12 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                   onPressed: () {
                     Navigator.pop(context);
                   },
-                  child: Text('Cancel'),
+                  child: const Text('Cancel'),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: createGroup,
-                  child: Text('Create'),
+                  child: const Text('Create'),
                 ),
               ],
             ),

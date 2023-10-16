@@ -32,6 +32,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   late String groupDescription = '';
   late List<String> groupMembers = [];
   late String groupProfileImageUrl = '';
+  String text="";
+  String media="";
 
   final TextEditingController _messageController = TextEditingController();
   Uint8List? image;
@@ -57,57 +59,63 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     return Scaffold(
       body: Column(
         children: [
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => GroupInfoPage(
-                    groupId: widget.clickedGroupId,
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              margin: const EdgeInsets.all(10.0),
-              padding: const EdgeInsets.all(10.0),
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                border: Border.all(color: Colors.black),
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              height: 60,
-              child: Row(
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.blue,
-                        width: 0.1,
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GroupInfoPage(
+                        groupId: widget.clickedGroupId,
                       ),
                     ),
-                    child: ClipOval(
-                      child: Image.network(
-                        widget.selectedGroupDocument[1],
+                  );
+                },
+                child: Container(
+                  width: 900,
+                  margin: const EdgeInsets.all(10.0),
+                  padding: const EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  height: 60,
+                  child: Row(
+                    children: [
+                      Container(
                         width: 30,
                         height: 30,
-                        fit: BoxFit.cover,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.blue,
+                            width: 0.1,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            widget.selectedGroupDocument[1],
+                            width: 30,
+                            height: 30,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(
+                        width: 20,
+                      ),
+                      Text(
+                        widget.selectedGroupDocument[0],
+                        style: const TextStyle(fontSize: 20,),
+                      ),
+                    ],
                   ),
-                  const SizedBox(
-                    width: 20,
-                  ),
-                  Text(
-                    widget.selectedGroupDocument[0],
-                    style: const TextStyle(fontSize: 20),
-                  ),
-                ],
+                ),
               ),
-            ),
+
+            ],
           ),
           Column(
             children: [
@@ -116,7 +124,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                 child: SizedBox(
                   height: 500,
                   child: Center(
-                    child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.clickedGroupId, groupId: widget.clickedGroupId,oppositeBlocked:const [],youBlocked:false),
+                    child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.clickedGroupId, groupId: widget.clickedGroupId,oppositeBlocked:const [],youBlocked:false,string: text,media:media),
                   ),
                 ),
               ),
@@ -587,3 +595,45 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
 }
 
 
+
+
+
+
+
+
+// const SizedBox(width: 10),
+// ElevatedButton(
+//     onPressed:(){
+//       (media=="images")?(media=""):(media="images");
+//       setState(() {
+//         media;
+//       });
+//     },
+//     child: Text("Show Images")
+// ),
+// const SizedBox(width: 10),
+// ElevatedButton(
+//     onPressed:(){
+//       (media=="videos")?(media=""):(media="videos");
+//       setState(() {
+//         media;
+//       });
+//     },
+//     child: Text("Show Videos")
+// ),
+// const SizedBox(width: 10),
+// Expanded(
+//   child: TextField(
+//     onChanged: (value) {
+//       setState(() {
+//         text = value; // Update the string variable as text changes
+//       });
+//     },
+//     decoration: InputDecoration(
+//       hintText: 'Search...',
+//       border: OutlineInputBorder(
+//         borderRadius: BorderRadius.circular(10.0),
+//       ),
+//     ),
+//   ),
+// ),

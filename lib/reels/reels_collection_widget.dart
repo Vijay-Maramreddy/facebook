@@ -1,18 +1,12 @@
 import 'dart:async';
-import 'package:chewie/chewie.dart';
-import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
-import 'package:facebook/Posts/comment_input_screen.dart';
 import 'package:facebook/reels/reels_comment_screen.dart';
 import 'package:facebook/reels/video_container.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:video_player/video_player.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
-import 'dart:convert';
 
 class ReelsCollectionWidget extends StatefulWidget {
   ReelsCollectionWidget();
@@ -166,7 +160,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
                                               children: [
                                                 Row(
                                                   children: [
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 20,
                                                     ),
                                                     IconButton(
@@ -200,7 +194,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
                                             );
                                           },
                                         ),
-                                        SizedBox(
+                                        const SizedBox(
                                           height: 40,
                                         ),
                                         Row(
@@ -222,7 +216,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
                                             // Text('Comments: ${document.commentsCount}'),
                                           ],
                                         ),
-                                        SizedBox(
+                                        const SizedBox(
                                           height: 40,
                                         ),
                                         Row(
@@ -320,8 +314,9 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
     String? currentUserId = user?.uid;
     if (currentUserId == postUserId) {
       return true;
-    } else
+    } else {
       return false;
+    }
   }
 
   // void deletePost(String documentId) {}
@@ -337,10 +332,6 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
     }
   }
 
-  // final whatsappLink = 'https://api.whatsapp.com/send?text=Check%20out%20this%20image:%20$encodedImageUrl';
-
-
-
   Future<void> _showDialog(BuildContext context, String linkToShare) async {
     final currentContext = context;
     List<String> userIds = [];
@@ -351,7 +342,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Select Users'),
+              title: const Text('Select Users'),
               content: SingleChildScrollView(
                 child: Column(
                   children: userDataMap.keys.map((userId) {
@@ -383,7 +374,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
               ),
               actions: <Widget>[
                 TextButton(
-                  child: Text('OK'),
+                  child: const Text('OK'),
                   onPressed: () {
                     shareLinkToAllFriends(userIds, linkToShare);
                     Navigator.of(context).pop(userIds);

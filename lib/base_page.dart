@@ -1,10 +1,7 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import 'app_style.dart';
 
 class BasePage extends StatelessWidget {
@@ -16,14 +13,12 @@ class BasePage extends StatelessWidget {
   }
 }
 
-
-// Function to show an alert dialog
 void showAlert(BuildContext context, String message) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('Alert'),
+        title: const Text('Alert'),
         content: Text(message),
         actions: <Widget>[
           TextButton(
@@ -31,7 +26,7 @@ void showAlert(BuildContext context, String message) {
               // Close the dialog
               Navigator.of(context).pop();
             },
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       );
@@ -45,20 +40,21 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('Alert Example'),
+          title: const Text('Alert Example'),
         ),
         body: Center(
           child: ElevatedButton(
             onPressed: () {
-              // Call the showAlert function to display the alert
               showAlert(context, 'This is a simple alert message.');
             },
-            child: Text('Show Alert'),
+            child: const Text('Show Alert'),
           ),
         ),
       ),
@@ -77,10 +73,10 @@ final BoxDecoration customBoxDecoration = BoxDecoration(
 
 
 pickImage(ImageSource source) async{
-  final ImagePicker _imagePicker =ImagePicker();
-  XFile? _file=await _imagePicker.pickImage(source: source);
-  if(_file !=null){
-    return await _file.readAsBytes();
+  final ImagePicker imagePicker =ImagePicker();
+  XFile? file=await imagePicker.pickImage(source: source);
+  if(file !=null){
+    return await file.readAsBytes();
   }
   else{
     print("Image not found");

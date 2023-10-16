@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/reels/reels_collection_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,11 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:chewie/chewie.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
-
 import '../app_style.dart';
-import '../base_page.dart';
 
 class ReelsPage extends StatefulWidget {
   const ReelsPage({super.key});
@@ -38,7 +34,6 @@ class _ReelsPageState extends State<ReelsPage> {
     Reference child = storage.ref("Reelvideos").child(videoFileName);
 
     await child.putData(bytes);
-    // TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await child.getDownloadURL();
     return downloadUrl;
   }
@@ -47,11 +42,11 @@ class _ReelsPageState extends State<ReelsPage> {
     if (videoUrl != null && videoUrl.isNotEmpty) {
       var message = '';
 
-      final VideoPlayerController _videoPlayerController = VideoPlayerController.network(videoUrl);
-      await _videoPlayerController.initialize();
+      final VideoPlayerController videoPlayerController = VideoPlayerController.network(videoUrl);
+      await videoPlayerController.initialize();
 
-      final ChewieController _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
+      final ChewieController chewieController = ChewieController(
+        videoPlayerController: videoPlayerController,
         aspectRatio: 16 / 9,
         autoPlay: true,
         looping: true,
@@ -68,7 +63,7 @@ class _ReelsPageState extends State<ReelsPage> {
                 SizedBox(
                   width: 500,
                   height: 400,
-                  child: Chewie(controller: _chewieController),
+                  child: Chewie(controller: chewieController),
                 ),
                 TextField(
                   onChanged: (value) {
@@ -97,8 +92,8 @@ class _ReelsPageState extends State<ReelsPage> {
       );
 
       // Dispose the controllers after the dialog is closed
-      _videoPlayerController.dispose();
-      _chewieController.dispose();
+      videoPlayerController.dispose();
+      chewieController.dispose();
 
       return message;
     } else {
@@ -113,7 +108,7 @@ class _ReelsPageState extends State<ReelsPage> {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-      String? videoUrl = await uploadVideoToStorage('videos/' + uuid, _videoFile!);
+      String? videoUrl = await uploadVideoToStorage('videos/$uuid', _videoFile!);
       String? message = await _showVideoPickerDialog(videoUrl);
 
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('reels');
@@ -142,7 +137,7 @@ class _ReelsPageState extends State<ReelsPage> {
       home: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.blue,
-          title: Text("Reels Page"),
+          title: const Text("Reels Page"),
         ),
         body: Container(
           alignment: Alignment.center,

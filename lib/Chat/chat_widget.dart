@@ -22,7 +22,13 @@ class ChatWidget extends StatefulWidget {
   final String? selectedUserDetailsDocumentId;
   final String? groupId;
   final bool? isBlockedByYou;
-  const ChatWidget({super.key, this.selectedUserDetailsDocumentData, this.selectedUserDetailsDocumentId, this.groupId, required this.isBlockedByYou,});
+  const ChatWidget({
+    super.key,
+    this.selectedUserDetailsDocumentData,
+    this.selectedUserDetailsDocumentId,
+    this.groupId,
+    required this.isBlockedByYou,
+  });
 
   @override
   State<ChatWidget> createState() => _ChatWidgetState();
@@ -30,13 +36,12 @@ class ChatWidget extends StatefulWidget {
 
 class _ChatWidgetState extends State<ChatWidget> {
   final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController();
   Uint8List? image;
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   VideoPlayerController? _videoPlayerController;
-
-
+  String text = "";
+  String media = "";
 
   late int count;
   late final bool _isBlockedByYou = widget.isBlockedByYou!;
@@ -73,7 +78,8 @@ class _ChatWidgetState extends State<ChatWidget> {
           height: 650,
           child: Scaffold(
             body: Column(children: [
-
+              Row(
+                children: [
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -95,7 +101,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                       ),
 
                       height: 60,
-                      // width: 1400,
+                      width: 900,
                       child: Row(
                         children: [
                           Container(
@@ -128,6 +134,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 10),
+
+                ],
+              ),
               Column(
                 children: [
                   SingleChildScrollView(
@@ -135,7 +145,15 @@ class _ChatWidgetState extends State<ChatWidget> {
                     child: SizedBox(
                       height: 500,
                       child: Center(
-                        child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.selectedUserDetailsDocumentId, groupId: widget.groupId,oppositeBlocked:oppositeBlocked,youBlocked:_isBlockedByYou,),
+                        child: AllInteractions(
+                          interactedBy: currentUserId,
+                          interactedWith: widget.selectedUserDetailsDocumentId,
+                          groupId: widget.groupId,
+                          oppositeBlocked: oppositeBlocked,
+                          youBlocked: _isBlockedByYou,
+                          string: text,
+                          media:media,
+                        ),
                       ),
                     ),
                   ),
@@ -220,25 +238,23 @@ class _ChatWidgetState extends State<ChatWidget> {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-      String? imageUrl = await uploadImageToStorage('postImages/' + uuid, image!);
+      String? imageUrl = await uploadImageToStorage('postImages/$uuid', image!);
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
       String? currentUserId = user?.uid;
       String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
-      if (imageUrl != null) {
-        await interactionsCollection.add({
-          'seenStatus': false,
-          'baseText': "",
-          'interactedBy': currentUserId,
-          'interactedWith': widget.selectedUserDetailsDocumentId,
-          'imageUrl': imageUrl,
-          'dateTime': now,
-          'message': message,
-          'groupId': groupId,
-          'videoUrl': '',
-          'visibility': !_isBlockedByYou,
-        });
-      }
+      await interactionsCollection.add({
+        'seenStatus': false,
+        'baseText': "",
+        'interactedBy': currentUserId,
+        'interactedWith': widget.selectedUserDetailsDocumentId,
+        'imageUrl': imageUrl,
+        'dateTime': now,
+        'message': message,
+        'groupId': groupId,
+        'videoUrl': '',
+        'visibility': !_isBlockedByYou,
+      });
     } else {
       print('No image picked.');
     }
@@ -345,11 +361,11 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (videoUrl != null && videoUrl.isNotEmpty) {
       var message = '';
 
-      final VideoPlayerController _videoPlayerController = VideoPlayerController.network(videoUrl);
-      await _videoPlayerController.initialize();
+      final VideoPlayerController videoPlayerController = VideoPlayerController.network(videoUrl);
+      await videoPlayerController.initialize();
 
-      final ChewieController _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
+      final ChewieController chewieController = ChewieController(
+        videoPlayerController: videoPlayerController,
         aspectRatio: 16 / 9,
         autoPlay: true,
         looping: true,
@@ -366,7 +382,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                 SizedBox(
                   width: 500,
                   height: 400,
-                  child: Chewie(controller: _chewieController),
+                  child: Chewie(controller: chewieController),
                 ),
                 TextField(
                   onChanged: (value) {
@@ -394,9 +410,8 @@ class _ChatWidgetState extends State<ChatWidget> {
         },
       );
 
-      // Dispose the controllers after the dialog is closed
-      _videoPlayerController.dispose();
-      _chewieController.dispose();
+      videoPlayerController.dispose();
+      chewieController.dispose();
 
       return message;
     } else {
@@ -416,7 +431,7 @@ class _ChatWidgetState extends State<ChatWidget> {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-      String? videoUrl = await uploadVideoToStorage('videos/' + uuid, video!);
+      String? videoUrl = await uploadVideoToStorage('videos/$uuid', video!);
       String? message = await _showVideoPickerDialog(videoUrl);
 
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
@@ -450,7 +465,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     Reference child = storage.ref("messagevideos").child(videoFileName);
 
     await child.putData(bytes);
-    // TaskSnapshot snapshot = await uploadTask;
     String downloadUrl = await child.getDownloadURL();
     return downloadUrl;
   }
@@ -553,9 +567,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (documentSnapshot.data() != null) {
       List<String> blockedData = List<String>.from(documentSnapshot.data()!['blocked']);
 
-      if (blockedData != null) {
-        oppositeBlocked = List<String>.from(blockedData);
-      }
+      oppositeBlocked = List<String>.from(blockedData);
     } else {
       print("document snapshot of opposite user is empty");
     }
@@ -565,8 +577,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     CollectionReference interactions = FirebaseFirestore.instance.collection('interactions');
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-
-    // Query documents where the 'interactedWith' field is equal to uid
     QuerySnapshot querySnapshot =
         await interactions.where('groupId', isEqualTo: widget.groupId).where('interactedWith', isEqualTo: currentUserId).get();
 
@@ -581,3 +591,49 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ElevatedButton(
+//     onPressed: () {
+//       (media == "images") ? (media = "") : (media = "images");
+//       setState(() {
+//         media;
+//       });
+//     },
+//     child: Text("Show Images")),
+// const SizedBox(width: 10),
+// ElevatedButton(
+//     onPressed: () {
+//       (media == "videos") ? (media = "") : (media = "videos");
+//       setState(() {
+//         media;
+//       });
+//     },
+//     child: Text("Show Videos")),
+// const SizedBox(width: 10),
+// Expanded(
+//   child: TextField(
+//     onChanged: (value) {
+//       setState(() {
+//         text = value; // Update the string variable as text changes
+//       });
+//     },
+//     decoration: InputDecoration(
+//       hintText: 'Search...',
+//       border: OutlineInputBorder(
+//         borderRadius: BorderRadius.circular(10.0),
+//       ),
+//     ),
+//   ),
+// ),

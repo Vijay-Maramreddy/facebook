@@ -1,12 +1,11 @@
+import 'dart:collection';
 import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
 import '../app_style.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
@@ -42,6 +41,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   List<String> selectedGroupMembers = [];
   Map<String,DateTime> originalGroupMembers={};
   List<String> groupMembers = [];
+  List<String> groupMembersAtStart = [];
   Map<String, List<String>> mapOfLists = {};
   String superAdmin = "";
   String createdBy = "";
@@ -108,9 +108,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                           ),
               ),
             ),
-            const SizedBox(
-              height: 25,
-            ),
+            const SizedBox(height: 25,),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -171,7 +169,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                     onChanged: (String? newValue) {
                       setState(() {
                         selectedDropdownValue = newValue!;
-                        print(selectedDropdownValue);
                         handleDropdownSelection(selectedDropdownValue);
                       });
                     },
@@ -262,8 +259,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                 shrinkWrap: true,
                 itemCount: groupMembers.length,
                 itemBuilder: (context, index) {
-                  // User? user = FirebaseAuth.instance.currentUser;
-                  // String? currentUserId = user?.uid;
                   final isAdminSuperAdmin = currentUserId == superAdmin;
                   final isChecked = selectedAdmins.contains(groupMembers[index]);
                   if (!isAdminSuperAdmin && !selectedAdmins.contains(groupMembers[index])) {
@@ -358,8 +353,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                 shrinkWrap: true,
                 itemCount: groupMembers.length,
                 itemBuilder: (context, index) {
-                  // User? user = FirebaseAuth.instance.currentUser;
-                  // String? currentUserId = user?.uid;
                   final isAdmin = admins.contains(currentUserId);
                   final isChecked = selectedGroupMembers.contains(groupMembers[index]);
                   return ListTile(
@@ -418,9 +411,16 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                                 if (value != null) {
                                   if (value) {
                                     originalGroupMembers[groupMembers[index]]=DateTime.now();
+                                    setState(() {
+                                      selectedGroupMembers.add(groupMembers[index]);
+                                    });
                                   } else {
                                     originalGroupMembers.remove(groupMembers[index]);
+                                    setState(() {
+                                      selectedGroupMembers.remove(groupMembers[index]);
+                                    });
                                   }
+
                                 }
                               });
                             },
@@ -476,8 +476,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         createdBy = createdUserDocument['firstName'];
         createdUserProfileImageUrl = createdUserDocument['profileImageUrl'];
         superAdmin = userDocument['superAdmin'];
-        originalGroupMembers=userDocument['groupMembers'];
-        groupMembers = List<String>.from(userDocument['groupMembers'].keys);
+        LinkedHashMap<String, dynamic> linkedGroupMembers = userDocument['groupMembers'];
+        linkedGroupMembers.forEach((key, value) {
+          originalGroupMembers[key] = value.toDate();
+          groupMembers.add(key);
+        });
+        groupMembersAtStart=[...groupMembers];
         fetchFriends();
         admins = List<String>.from(userDocument['admin']);
 
@@ -528,8 +532,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       sendMessageOrIcon(message);
     }
 
-    print("the admis are :$admins");
-    // List<String> actualAdmins = admins;
     List<String> tempAdminsMembers = [...admins];
     String? message2 = "";
     tempAdminsMembers.removeWhere((element) => selectedAdmins.contains(element));
@@ -542,7 +544,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     }
 
     List<String> tempSelectedAdmins = [...selectedAdmins];
-    print("the admins are :$admins and selected admins are $selectedAdmins");
     tempSelectedAdmins.removeWhere((element) => admins.contains(element));
     String? message3 = "";
     for (String members in tempSelectedAdmins) {
@@ -555,11 +556,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
 
     try {
       FirebaseFirestore firestore = FirebaseFirestore.instance;
-      String? id = widget.groupId;
+      // List<String> tempList=;
       DocumentReference documentReference = firestore.collection('Groups').doc(widget.groupId);
       await documentReference.update(updatedData);
+      compareLists(groupMembers, originalGroupMembers.keys.toList());
       Navigator.pop(context);
-      compareLists(groupMembers, originalGroupMembers.keys as List<String>);
+
     } catch (e) {
       print("Error updating user details: $e");
       String errorMessage = "An error occurred while updating user details";
@@ -608,17 +610,18 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   }
 
 
-  Future<void> fetchMessengerDetails(data) async {
+  Future<void> fetchMessengerDetails(groupId) async {
     CollectionReference groupCollection = FirebaseFirestore.instance.collection('Groups');
-    var userDocumentSnapshot = await groupCollection.doc(data).get();
+    var userDocumentSnapshot = await groupCollection.doc(groupId).get();
     List<String> userMembers = [];
     if (userDocumentSnapshot.exists) {
+      // userMembers=groupMembers;
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       if (userDocument['groupMembers'].keys != null) {
         userMembers = List<String>.from(userDocument['groupMembers'].keys);
       }
     } else {
-      userMembers = data.split('-');
+      userMembers = groupId.split('-');
     }
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
     for (String userMember in userMembers) {
@@ -712,11 +715,12 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                                 if (value != null) {
                                   if (value) {
                                     originalGroupMembers[item[0]]=DateTime.now();
+                                    selectedFriends.add(item[0]);
                                   } else {
                                     originalGroupMembers.remove(item[0]);
+                                    selectedFriends.remove(item[0]);
                                   }
                                 }
-                                print("Selected New Friends $originalGroupMembers");
                               });
                             },
                           )
@@ -755,7 +759,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
 
   bool isSelected(List<String> item) {
     var result = selectedFriends.contains(item[0]);
-    print("isSelected $selectedFriends ${item[0]} $result");
     return result;
   }
 
@@ -788,7 +791,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     setState(() {
       friendsData.clear();
       friendsData.addAll(friendsDataTemp);
-      print("Non member Friends Data $friendsData");
     });
   }
 
@@ -800,22 +802,23 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     DocumentReference groupDocRef = FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
     DocumentSnapshot groupDoc = await groupDocRef.get();
 
-    List<String> gOriginalList = List<String>.from(groupDoc['groupMembers']);
+    List<String> gOriginalList = [];
+    gOriginalList.addAll(groupMembersAtStart);
     for (String members in selectedFriends) {
       String addMessage = "added ";
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(members);
       DocumentSnapshot userDoc = await userDocRef.get();
       addMessage = "$addMessage ${userDoc['firstName']}";
+      sendMessageOrIcon(addMessage);
       List<String> originalList = List<String>.from(userDoc['groups']);
       originalList.add(widget.groupId!);
       await userDocRef.update({'groups': originalList});
       gOriginalList.add(members);
-      sendMessageOrIcon(addMessage);
+
     }
-    await groupDocRef.update({'groupMembers': gOriginalList});
+    await groupDocRef.update({'groupMembers': originalGroupMembers});
 
     try {
-      // Retrieve the existing group data from Firestore
       DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
           .collection('Groups')
           .doc(widget.groupId)
@@ -832,28 +835,24 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         await FirebaseFirestore.instance
             .collection('Groups')
             .doc(widget.groupId)
-            .update({'groupData': groupData});
+            .update({'messageCount': groupData});
       } else {
         print('Document does not exist');
       }
     } catch (e) {
       print('Error: $e');
     }
-
     setState(() {
       selectedFriends.clear();
     });
   }
 
   void sendMessageOrIcon(String message) async {
-    // User? user = FirebaseAuth.instance.currentUser;
-    // String? currentUserId = user?.uid;
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     String? imageUrl = '';
-    // String groupId = combineIds(currentUserId, widget.groupId);
     if (message.isNotEmpty) {
       await interactionsCollection.add({
         'seenStatus':false,

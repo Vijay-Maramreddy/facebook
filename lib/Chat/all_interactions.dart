@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:html';
 import 'dart:js_interop';
 
@@ -16,6 +17,7 @@ class AllInteractions extends StatefulWidget {
   late List<String> oppositeBlocked;
   late bool youBlocked;
   late String? string;
+  late String? media;
   AllInteractions(
       {super.key,
       required this.interactedBy,
@@ -23,7 +25,8 @@ class AllInteractions extends StatefulWidget {
       required this.groupId,
       required this.oppositeBlocked,
       required this.youBlocked,
-        this.string,
+        this.string="",
+        this.media="",
       });
 
   @override
@@ -35,7 +38,6 @@ class _AllInteractionsState extends State<AllInteractions> {
   String interactedByUserFirstName = "";
   String interactedWithUserFirstName = "";
   String interactedByUserProfileImageUrl = "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
-  String string="";
 
   late DateTime startDate=DateTime.now();
 
@@ -44,18 +46,18 @@ class _AllInteractionsState extends State<AllInteractions> {
     // TODO: implement initState
     super.initState();
     fetchMessengerDetails(widget.groupId);
-    // var blocked = widget.oppositeBlocked;
   }
 
   @override
   Widget build(BuildContext context) {
     print(startDate);
+    print("the string is ${widget.string}");
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('interactions')
           .where('groupId', isEqualTo: widget.groupId)
           .where('visibility', isEqualTo: true)
-          .where('dateTime', isGreaterThanOrEqualTo: startDate)// Adjust this condition as needed
+          .where('dateTime', isGreaterThanOrEqualTo: startDate,)// Adjust this condition as needed
           .orderBy('dateTime')
           .snapshots(),
       builder: (context, snapshot) {
@@ -115,7 +117,8 @@ class _AllInteractionsState extends State<AllInteractions> {
                     }
                 }
               return Visibility(
-                visible: (string==""||string.isEmpty||string.isNull)?true:data['message'].contains(string),
+                visible: (widget.media=="")?(widget.string==""||widget.string!.isEmpty||widget.string.isNull)?true:data['message'].contains(widget.string):
+                (widget.media=="images")?((data['imageUrl']=="")?false:true):(data['videoUrl']=="")?false:true,
                 child: Column(
                   children: [
                     if(data['baseText']!="")
@@ -476,18 +479,22 @@ class _AllInteractionsState extends State<AllInteractions> {
   Future<void> fetchMessengerDetails(data) async {
     CollectionReference groupCollection = FirebaseFirestore.instance.collection('Groups');
     var userDocumentSnapshot = await groupCollection.doc(data).get();
-
-
-
     List<String> userMembers = [];
+    User? user=FirebaseAuth.instance.currentUser;
+    String? currentUserId=user?.uid;
 
     if (userDocumentSnapshot.exists) {
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       String visibleDate=userDocument['visibleDate'];
-      DateTime groupStarted=userDocument['dateTime'].toDate();
+      Map<String,DateTime> originalGroupMembers={};
+      LinkedHashMap<String, dynamic> linkedGroupMembers = userDocument['groupMembers'];
+      linkedGroupMembers.forEach((key, value) {
+        originalGroupMembers[key] = value.toDate();
+      });
+      DateTime? groupStarted=originalGroupMembers[currentUserId];
       if(visibleDate=="none")
         {
-          startDate=groupStarted;
+          startDate=groupStarted!;
         }
       else if(visibleDate=="1 week")
         {
