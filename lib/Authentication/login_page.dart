@@ -170,19 +170,17 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // void getUserDataByEmail(TextEditingController email, TextEditingController password) {
-
   Future<void> authenticateUser(String email, String password) async {
     try {
-      // Perform authentication (replace with your authentication logic)
       bool isAuthenticated = await authenticateWithEmailAndPassword(email, password);
-      print(isAuthenticated.toString() + 'isAuthenticated');
+      print('${isAuthenticated}isAuthenticated');
       if (isAuthenticated) {
-        // Authentication successful, retrieve user data
         UserData userData = await fetchUserDataByEmail(email);
         print('Authentication successful for user: ${userData.username}');
 
       } else {
+        String message="Authentication failed. Invalid email or password.";
+        showAlert(context, message);
         print('Authentication failed. Invalid email or password.');
       }
     } catch (e) {
@@ -200,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen(email: email,)));
       return true;
     } on FirebaseAuthException catch (e) {
-      // Authentication failed
+
       print('Failed to authenticate: $e');
       return false;
     }

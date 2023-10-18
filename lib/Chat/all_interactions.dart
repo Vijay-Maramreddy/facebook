@@ -455,15 +455,15 @@ class _AllInteractionsState extends State<AllInteractions> {
       Map<String, DateTime> tempSeen = (seenByMap ?? {}).map(
         (key, value) => MapEntry(key, (value as Timestamp).toDate()),
       );
-
-      print(tempSeen.length);
-      if (tempSeen.isEmpty) {
-        tempSeen[currentUserId!] = DateTime.now();
-        await FirebaseFirestore.instance.collection('interactions').doc(document.id).update({'seenBy': tempSeen});
-      }
-      if (!tempSeen.containsKey(currentUserId)) {
-        tempSeen[currentUserId!] = DateTime.now();
-        await FirebaseFirestore.instance.collection('interactions').doc(document.id).update({'seenBy': tempSeen});
+      if(document['dateTime'].toDate().isAfter(startDate) || document['baseText']=="") {
+        if (tempSeen.isEmpty) {
+          tempSeen[currentUserId!] = DateTime.now();
+          await FirebaseFirestore.instance.collection('interactions').doc(document.id).update({'seenBy': tempSeen});
+        }
+        if (!tempSeen.containsKey(currentUserId)) {
+          tempSeen[currentUserId!] = DateTime.now();
+          await FirebaseFirestore.instance.collection('interactions').doc(document.id).update({'seenBy': tempSeen});
+        }
       }
     }
   }

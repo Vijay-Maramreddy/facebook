@@ -865,6 +865,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         'videoUrl': '',
         'visibility': true,
         'baseText': message,
+        'seenBy':{},
       });
     }
   }

@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 IconButton(
-                  padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
                   icon: const Icon(Icons.video_collection_outlined),
                   color: Colors.white, // Customize the color as needed
                   onPressed: () {
@@ -119,14 +119,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     IconButton(
-                      padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                      padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
                       icon: const Icon(Icons.chat),
                       color: Colors.white, // Customize the color as needed
                       onPressed: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => const ChatPage()));
                       },
                     ),
-                    if (newMessagesCount > 0) Text("$newMessagesCount", style: TextStyle(color: Colors.red)),
+                    if (newMessagesCount > 0) Text("$newMessagesCount", style: const TextStyle(color: Colors.red)),
                   ],
                 ),
               ],
@@ -176,17 +176,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   future: fetchData(filteredNames[index]),
                                                   builder: (context, snapshot) {
                                                     if (snapshot.connectionState == ConnectionState.waiting) {
-                                                      return CircularProgressIndicator(); // or a loading indicator
+                                                      return const CircularProgressIndicator(); // or a loading indicator
                                                     } else if (snapshot.hasError) {
                                                       return Text('Error: ${snapshot.error}');
                                                     } else if (!snapshot.hasData || snapshot.data == null) {
-                                                      return Text('No user found with the specified first name.');
+                                                      return const Text('No user found with the specified first name.');
                                                     } else {
                                                       DocumentSnapshot userDocument = snapshot.data!;
                                                       FirebaseAuth auth = FirebaseAuth.instance;
                                                       User? user = auth.currentUser;
                                                       if (userDocument.id == user?.uid) return Container();
-                                                      return Container(
+                                                      return SizedBox(
                                                         height: 40,
                                                         child: GestureDetector(
                                                           onTap: () {
@@ -436,10 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
       String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
       int shareCount = 0;
       if (imageUrl != null) {
-        // Use the Firebase auth user's UID as the user ID
         CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-        // // Query the collection to find documents that match the provided mobile number
-        // DocumentSnapshot documentSnapshot = await usersCollection.doc(user.uid).get();
         User? user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           DocumentSnapshot documentSnapshot = await usersCollection.doc(user.uid).get();

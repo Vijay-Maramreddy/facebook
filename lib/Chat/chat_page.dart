@@ -332,7 +332,10 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             if (groupId == "" && clickedGroupId=="")
-              const Text("please select")
+              Padding(
+                padding: EdgeInsets.fromLTRB(600, 0, 600, 0),
+                child: const Text("please select"),
+              )
             else if (isGroup == false)
               Visibility(
                 visible: !isGroup,
