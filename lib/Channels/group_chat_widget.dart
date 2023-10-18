@@ -6,6 +6,7 @@ import 'package:chewie/chewie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:facebook/Channels/group_info_page.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   bool isGroup=true;
+  Map<String,DateTime> seenBy={};
 
   @override
   void initState() {
@@ -48,6 +50,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       groupProfileImageUrl = widget.selectedGroupDocument[1];
       getGroupData(widget.clickedGroupId!);
       makeMessageCountZero();
+
     });
     super.initState();
   }
@@ -180,6 +183,12 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                   },
                   icon: const Icon(Icons.map),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.audio_file),
+                  onPressed: () async {
+                    await _pickaudio();
+                  },
+                )
               ])
             ],
           ),
@@ -280,7 +289,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         'message': text,
         'groupId': widget.clickedGroupId,
         'videoUrl': '',
+        'audioUrl':'',
+        'isVanish':false,
         'visibility':true,
+        'seenBy':seenBy,
       });
       _messageController.clear();
 
@@ -372,7 +384,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         'message': message,
         'groupId': widget.clickedGroupId,
         'videoUrl': '',
+        'audioUrl':'',
+        'isVanish':false,
         'visibility':true,
+        'seenBy':seenBy,
       });
     } else {
       print('No image picked.');
@@ -465,11 +480,14 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
           'interactedBy': currentUserId,
           'interactedWith': widget.clickedGroupId,
           'videoUrl': videoUrl,
+          'audioUrl':'',
           'imageUrl': '',
           'dateTime': now,
           'message': message,
           'groupId': widget.clickedGroupId,
+          'isVanish':false,
           'visibility':true,
+          'seenBy':seenBy,
         });
       }
     } else {
@@ -519,7 +537,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       'message': message,
       'groupId': widget.clickedGroupId,
       'videoUrl': '',
+      'audioUrl':'',
+      'isVanish':false,
       'visibility':true,
+      'seenBy':seenBy,
     });
     increaseMessageCount();
     // Clear the text field after sending the message
@@ -590,8 +611,62 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     } catch (e) {
       print('Error updating messageCount: $e');
     }
-
   }
+
+  Future<void> _pickaudio() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final PlatformFile audioFile = result.files.first;
+      String audioUrl = await _uploadAudioToStorage(audioFile);
+      addaudiotoFirestore(audioUrl);
+    }
+  }
+
+  Future<String> _uploadAudioToStorage(PlatformFile audioFile) async {
+    try {
+      Reference audioRef = FirebaseStorage.instance.ref().child('audio').child(audioFile.name ?? 'audio_file.mp3');
+      UploadTask uploadTask = audioRef.putData(audioFile.bytes!);
+
+      await uploadTask.whenComplete(() => null);
+
+      String audioUrl = await audioRef.getDownloadURL();
+
+      return audioUrl;
+    } catch (e) {
+      print('Error uploading audio: $e');
+      return '';
+    }
+  }
+
+  Future<void> addaudiotoFirestore(String audioUrl) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    DateTime now=DateTime.now();
+    await interactionsCollection.add({
+      'seenStatus': false,
+      'baseText': "",
+      'interactedBy': currentUserId,
+      'interactedWith': widget.clickedGroupId,
+      'videoUrl': "",
+      'imageUrl': '',
+      'dateTime': now,
+      'message': "",
+      'audioUrl':audioUrl,
+      'isVanish':false,
+      'groupId': widget.clickedGroupId,
+      'visibility': true,
+      'seenBy':seenBy,
+    });
+    increaseMessageCount();
+  }
+
+
 }
 
 

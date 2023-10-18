@@ -52,8 +52,11 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         'mobileNumber': widget.mobileNumber,
         'email':_emailController.text,
         'password':_passwordController.text,
-
+        'groups':[],
         'friends':friends,
+        'blocked':[],
+        'dateTime':DateTime.now(),
+        'profileImageUrl':"",
       });
 
       // Navigate to the home page or another screen

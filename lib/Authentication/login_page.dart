@@ -196,7 +196,6 @@ class _LoginPageState extends State<LoginPage> {
         email: email,
         password: password,
       );
-      print(userCredential);
       // Authentication successful
       Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen(email: email,)));
       return true;

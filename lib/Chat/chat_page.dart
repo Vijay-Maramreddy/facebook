@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/home/home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,18 +17,20 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   String? selectedUserDetailsDocumentId;
   Map<String, dynamic>? selectedUserDetailsDocumentData;
-  String? groupId;
+  String? groupId = "";
   late Future<QuerySnapshot<Map<String, dynamic>>> allUsersSnapshot;
   int count = 0;
   int counter = 0;
-  Map<String, int> resultMap = {};
+
+  Map<String, List<dynamic>> resultMap = {};
+  bool isVanish = false;
   List<String> blockedList = [];
   List<String> groupUids = [];
   List<List<dynamic>> groupsInfo = [];
   late bool isGroup = false;
-  String clickedGroupId = "";
+  String? clickedGroupId = "";
   List<dynamic> selectedGroupDocument = [];
-  late String currentUserEmail="";
+  late String currentUserEmail = "";
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _ChatPageState extends State<ChatPage> {
       return await FirebaseFirestore.instance.collection('users').get();
     } catch (e) {
       print('Error retrieving users: $e');
-      rethrow; // Rethrow the error to propagate it further if needed
+      rethrow;
     }
   }
 
@@ -67,13 +67,12 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat Page'),
-            leading: IconButton(
-                icon:Icon(Icons.arrow_back),
-                onPressed: () {
-                  // Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen(email:currentUserEmail)));
-                },
-            ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen(email: currentUserEmail)));
+          },
+        ),
       ),
       body: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -133,22 +132,33 @@ class _ChatPageState extends State<ChatPage> {
                                         if (key == currentUserId) {
                                           return Container();
                                         }
-                                        int? value = resultMap[key];
+                                        List? list1 = resultMap[key];
+                                        int? value = list1?[0];
 
                                         return Padding(
                                           padding: const EdgeInsets.all(10),
                                           child: ElevatedButton(
                                             onPressed: () {
+                                              String? interactedBy = currentUserId;
+                                              String? interactedTo = allUsersQuerySnapshot.docs[index].id;
+                                              updateOrAddInteraction(interactedBy!, interactedTo);
+                                              groupId = createGroupId(allUsersQuerySnapshot.docs[index].id);
+                                              selectedUserDetailsDocumentData = allUsersQuerySnapshot.docs[index].data();
+                                              selectedUserDetailsDocumentId = allUsersQuerySnapshot.docs[index].id;
+                                              deletedMessageCount(interactedBy, interactedTo);
+                                              isVanish = list1![1];
+                                              resultMap[selectedUserDetailsDocumentId!] = [0, list1?[1]];
+                                              isGroup = false;
                                               setState(() {
-                                                String? interactedBy = currentUserId;
-                                                String? interactedTo = allUsersQuerySnapshot.docs[index].id;
-                                                updateOrAddInteraction(interactedBy!, interactedTo);
-                                                groupId = createGroupId(allUsersQuerySnapshot.docs[index].id);
-                                                selectedUserDetailsDocumentData = allUsersQuerySnapshot.docs[index].data();
-                                                selectedUserDetailsDocumentId = allUsersQuerySnapshot.docs[index].id;
-                                                deletedMessageCount(interactedBy, interactedTo);
-                                                resultMap[selectedUserDetailsDocumentId!] = 0;
-                                                isGroup = false;
+                                                interactedTo;
+                                                interactedBy;
+                                                groupId;
+                                                selectedUserDetailsDocumentData;
+                                                selectedUserDetailsDocumentId;
+                                                isVanish;
+                                                resultMap[selectedUserDetailsDocumentId!];
+                                                isGroup;
+                                                print(groupId);
                                               });
                                             },
                                             child: Container(
@@ -251,24 +261,25 @@ class _ChatPageState extends State<ChatPage> {
                                   List<dynamic> groupData = groupsInfo[index];
                                   String name = groupData[0];
                                   String profileImageUrl = groupData[1];
-                                  String groupId = groupData[2];
-                                  int unSeenCount=groupData[3];
+                                  clickedGroupId = groupData[2]!;
+                                  int unSeenCount = groupData[3];
                                   return Padding(
                                     padding: const EdgeInsets.all(10),
                                     child: ElevatedButton(
                                       onPressed: () {
+                                        print("the group id is :$clickedGroupId");
+                                        isGroup = true;
                                         setState(() {
-                                          clickedGroupId = groupId;
-                                          isGroup = true;
+                                          clickedGroupId;
+                                          // clickedGroupId = clickedGroupId!;
+                                          isGroup;
                                           selectedGroupDocument = groupData; // Update selectedGroupDocument
-                                          groupData[3]=0;
+                                          groupData[3] = 0;
                                         });
                                       },
                                       child: Container(
                                         margin: const EdgeInsets.all(10),
-                                        // padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          // border: Border.all(color: Colors.black),
                                           borderRadius: BorderRadius.circular(10),
                                           color: Colors.blue,
                                         ),
@@ -302,8 +313,7 @@ class _ChatPageState extends State<ChatPage> {
                                                 style: const TextStyle(fontSize: 26),
                                               ),
                                             ),
-                                            if(groupData[3]>0)
-                                              Text("(${groupData[3]})",style: const TextStyle(color: Colors.red)),
+                                            if (groupData[3] > 0) Text("(${groupData[3]})", style: const TextStyle(color: Colors.red)),
                                           ],
                                         ),
                                       ),
@@ -320,34 +330,39 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
             ),
-            Visibility(
-              visible: !isGroup,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 1100,
-                  child: ChatWidget(
+            if (groupId == "" && clickedGroupId=="")
+              const Text("please select")
+            else if (isGroup == false)
+              Visibility(
+                visible: !isGroup,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: 1100,
+                    child: ChatWidget(
                       selectedUserDetailsDocumentData: selectedUserDetailsDocumentData,
                       selectedUserDetailsDocumentId: selectedUserDetailsDocumentId,
                       groupId: groupId,
-                      isBlockedByYou: blockedList.contains(selectedUserDetailsDocumentId)
+                      isBlockedByYou: blockedList.contains(selectedUserDetailsDocumentId),
+                      isVanish: isVanish,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Visibility(
-              visible: isGroup,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 1100,
-                  child: GroupChatWidget(
-                    clickedGroupId: clickedGroupId,
-                    selectedGroupDocument: selectedGroupDocument,
+              )
+            else
+              Visibility(
+                visible: isGroup,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: 1100,
+                    child: GroupChatWidget(
+                      clickedGroupId: clickedGroupId,
+                      selectedGroupDocument: selectedGroupDocument,
+                    ),
                   ),
                 ),
-              ),
-            )
+              )
           ],
         ),
       ),
@@ -366,7 +381,11 @@ class _ChatPageState extends State<ChatPage> {
   createGroupId(String id) {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
+    setState(() {
+      groupId;
+    });
     return groupId = combineIds(id, currentUserId);
+
   }
 
   Future<void> updateOrAddInteraction(String interactedBy, String interactedTo) async {
@@ -397,7 +416,6 @@ class _ChatPageState extends State<ChatPage> {
         'count': 0,
       });
       setState(() {});
-      print('Count field updated to 0 for document with ID: ${doc.id}');
     }
   }
 
@@ -411,11 +429,13 @@ class _ChatPageState extends State<ChatPage> {
         if (document.data()['interactedTo'] == currentUserId) {
           String uid = document.data()['interactedBy']; // Document UID
           int fieldValue = document.data()['count'];
-          setState(() {
-            resultMap[uid] = fieldValue;
-          });
+          bool tempIsVanish = document.data()['isVanish'] ?? false;
+          resultMap[uid] = [fieldValue, tempIsVanish];
         }
       }
+      setState(() {
+        resultMap;
+      });
     } catch (e) {
       print('Error retrieving field values: $e');
       rethrow; // Rethrow the error to propagate it further if needed
@@ -429,13 +449,13 @@ class _ChatPageState extends State<ChatPage> {
     DocumentReference documentReference = FirebaseFirestore.instance.collection('users').doc(currentUserId);
 
     DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await documentReference.get() as DocumentSnapshot<Map<String, dynamic>>;
-    currentUserEmail=documentSnapshot.data()?['email'];
+    currentUserEmail = documentSnapshot.data()?['email'];
     blockedList = List<String>.from(documentSnapshot.data()!['blocked']);
   }
 
   Future<void> getAllGroupInfo(List<String> groupUids) async {
-    User? user=FirebaseAuth.instance.currentUser;
-    String? currentUserId=user?.uid;
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
     for (var group in groupUids) {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(group).get();
       if (documentSnapshot.exists) {
@@ -443,8 +463,8 @@ class _ChatPageState extends State<ChatPage> {
         String name = data['groupName'];
         String profileImageUrl = data['groupProfileImageUrl'];
         String groupId = data['groupId'];
-        int noOfUnseenMessages=data['messageCount'][currentUserId];
-        List<dynamic> groupData = [name, profileImageUrl, groupId,noOfUnseenMessages];
+        int noOfUnseenMessages = data['messageCount'][currentUserId];
+        List<dynamic> groupData = [name, profileImageUrl, groupId, noOfUnseenMessages];
         setState(() {
           groupsInfo.add(groupData);
         });

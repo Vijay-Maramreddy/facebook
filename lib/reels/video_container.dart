@@ -27,28 +27,30 @@ class _VideoContainerState extends State<VideoContainer> {
     _videoPlayerController = VideoPlayerController.network(widget.videoUrl);
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController,
-      aspectRatio: 16 / 9, // Adjust the aspect ratio as needed
+      aspectRatio: 16 / 9,
       autoPlay: true,
       looping: true,
-      showControls: false, // Hide Chewie controls
+      showControls: false,
     );
 
-    // Set up a timer to update the progress indicator
-    _progressTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (_videoPlayerController.value.isPlaying) {
         setState(() {
-          _progress = _videoPlayerController.value.position.inMilliseconds / _videoPlayerController.value.duration.inMilliseconds;
+          if (_videoPlayerController.value.duration.inMilliseconds > 0) {
+            _progress = _videoPlayerController.value.position.inMilliseconds / _videoPlayerController.value.duration.inMilliseconds;
+          } else {
+            _progress = 0.0; // Handle the case where duration is zero
+          }
         });
       }
     });
 
-    // Listen for video end and restart it
     _videoPlayerController.addListener(() {
       if (_videoPlayerController.value.position >= _videoPlayerController.value.duration) {
         setState(() {
-          _progress = 0.0; // Reset the progress to zero when the video completes
+          _progress = 0.0;
         });
-        _videoPlayerController.seekTo(Duration(milliseconds: 0));
+        _videoPlayerController.seekTo(const Duration(milliseconds: 0));
         _videoPlayerController.play();
       }
     });
@@ -64,9 +66,7 @@ class _VideoContainerState extends State<VideoContainer> {
 
   @override
   Widget build(BuildContext context) {
-
     Alignment? alignment;
-
     switch (widget.alignment) {
       case 'left':
         alignment = Alignment.centerLeft;
@@ -77,13 +77,12 @@ class _VideoContainerState extends State<VideoContainer> {
       default:
         alignment = Alignment.center;
     }
-    // print(alignment);
     return Align(
       alignment: alignment,
       child: Column(
         children: [
-          Container(
-            width:550,
+          SizedBox(
+            width: 550,
             height: 300,
             child: Stack(
               alignment: alignment,
@@ -93,9 +92,9 @@ class _VideoContainerState extends State<VideoContainer> {
             ),
           ),
           LinearProgressIndicator(
-            value: _progress,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white), // Change the color as needed
-            backgroundColor: Colors.grey, // Change the background color as needed
+            value: _progress.clamp(0.0, 1.0), // Ensure progress is between 0.0 and 1.0
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            backgroundColor: Colors.grey,
           ),
         ],
       ),

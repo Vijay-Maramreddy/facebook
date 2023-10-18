@@ -10,23 +10,25 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
-
 import '../app_style.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import 'all_interactions.dart';
 import 'dart:html';
+import 'package:file_picker/file_picker.dart';
 
 class ChatWidget extends StatefulWidget {
   final Map<String, dynamic>? selectedUserDetailsDocumentData;
   final String? selectedUserDetailsDocumentId;
   final String? groupId;
   final bool? isBlockedByYou;
+  final bool? isVanish;
   const ChatWidget({
     super.key,
     this.selectedUserDetailsDocumentData,
     this.selectedUserDetailsDocumentId,
     this.groupId,
+    this.isVanish,
     required this.isBlockedByYou,
   });
 
@@ -35,6 +37,7 @@ class ChatWidget extends StatefulWidget {
 }
 
 class _ChatWidgetState extends State<ChatWidget> {
+
   final TextEditingController _messageController = TextEditingController();
   Uint8List? image;
   XFile? video;
@@ -42,6 +45,9 @@ class _ChatWidgetState extends State<ChatWidget> {
   VideoPlayerController? _videoPlayerController;
   String text = "";
   String media = "";
+  String audioLink = "";
+  bool? _isSwitched = false;
+  Map<String,DateTime> seenBy={};
 
   late int count;
   late final bool _isBlockedByYou = widget.isBlockedByYou!;
@@ -49,9 +55,9 @@ class _ChatWidgetState extends State<ChatWidget> {
 
   @override
   void initState() {
-    // TODO: implement initState
     updateMessageSeenStatus();
     super.initState();
+    obtainIsVanish();
   }
 
   @override
@@ -99,9 +105,8 @@ class _ChatWidgetState extends State<ChatWidget> {
                         border: Border.all(color: Colors.black),
                         borderRadius: BorderRadius.circular(10.0),
                       ),
-
                       height: 60,
-                      width: 900,
+                      width: 700,
                       child: Row(
                         children: [
                           Container(
@@ -135,7 +140,21 @@ class _ChatWidgetState extends State<ChatWidget> {
                     ),
                   ),
                   const SizedBox(width: 10),
-
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Switch(
+                        value: _isSwitched!,
+                        onChanged: (value) {
+                          setState(() {
+                            _isSwitched = value;
+                            changeVanishState();
+                          });
+                        },
+                      ),
+                      Text('Switch is $_isSwitched'),
+                    ],
+                  ),
                 ],
               ),
               Column(
@@ -143,7 +162,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                   SingleChildScrollView(
                     scrollDirection: Axis.vertical, // Change to vertical scroll
                     child: SizedBox(
-                      height: 500,
+                      height: 480,
                       child: Center(
                         child: AllInteractions(
                           interactedBy: currentUserId,
@@ -152,7 +171,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                           oppositeBlocked: oppositeBlocked,
                           youBlocked: _isBlockedByYou,
                           string: text,
-                          media:media,
+                          media: media,
                         ),
                       ),
                     ),
@@ -165,7 +184,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         margin: const EdgeInsets.all(10),
                         alignment: Alignment.center,
                         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                        width: 850,
+                        width: 750,
                         height: 45,
                         child: Row(
                           children: [
@@ -211,6 +230,12 @@ class _ChatWidgetState extends State<ChatWidget> {
                         },
                         icon: const Icon(Icons.map),
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.audio_file),
+                        onPressed: () async {
+                          await _pickaudio();
+                        },
+                      )
                     ]),
                   )
                 ],
@@ -253,7 +278,9 @@ class _ChatWidgetState extends State<ChatWidget> {
         'message': message,
         'groupId': groupId,
         'videoUrl': '',
+        'audioUrl': '',
         'visibility': !_isBlockedByYou,
+        'seenBy':seenBy,
       });
     } else {
       print('No image picked.');
@@ -351,7 +378,10 @@ class _ChatWidgetState extends State<ChatWidget> {
       'message': message,
       'groupId': groupId,
       'videoUrl': '',
+      'audioUrl': '',
+      'isVanish':_isSwitched,
       'visibility': !_isBlockedByYou,
+      'seenBy':seenBy,
     });
     // Clear the text field after sending the message
     _messageController.clear();
@@ -445,11 +475,14 @@ class _ChatWidgetState extends State<ChatWidget> {
           'interactedBy': currentUserId,
           'interactedWith': widget.selectedUserDetailsDocumentId,
           'videoUrl': videoUrl,
+          'audioUrl': '',
           'imageUrl': '',
           'dateTime': now,
           'message': message,
+          'isVanish':_isSwitched,
           'groupId': groupId,
           'visibility': !_isBlockedByYou,
+          'seenBy':seenBy,
         });
       }
     } else {
@@ -555,7 +588,10 @@ class _ChatWidgetState extends State<ChatWidget> {
         'message': text,
         'groupId': groupId,
         'videoUrl': '',
+        'audioUrl': '',
+        'isVanish':_isSwitched,
         'visibility': !_isBlockedByYou,
+        'seenBy':seenBy,
       });
       _messageController.clear();
     }
@@ -577,6 +613,17 @@ class _ChatWidgetState extends State<ChatWidget> {
     CollectionReference interactions = FirebaseFirestore.instance.collection('interactions');
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
+    QuerySnapshot querySnapshot1 =
+    await interactions.where('groupId', isEqualTo: widget.groupId)
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('isVanish',isEqualTo: true)
+        .where('seenStatus',isEqualTo: true).get();
+    for (QueryDocumentSnapshot doc in querySnapshot1.docs) {
+      await doc.reference.delete();
+      print('Document deleted: ${doc.id}');
+    }
+
+
     QuerySnapshot querySnapshot =
         await interactions.where('groupId', isEqualTo: widget.groupId).where('interactedWith', isEqualTo: currentUserId).get();
 
@@ -590,11 +637,99 @@ class _ChatWidgetState extends State<ChatWidget> {
       });
     }
   }
+
+  Future<void> _pickaudio() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final PlatformFile audioFile = result.files.first;
+      String audioUrl = await _uploadAudioToStorage(audioFile);
+      addaudiotoFirestore(audioUrl);
+    }
+  }
+
+  Future<String> _uploadAudioToStorage(PlatformFile audioFile) async {
+    try {
+      Reference audioRef = FirebaseStorage.instance.ref().child('audio').child(audioFile.name ?? 'audio_file.mp3');
+      UploadTask uploadTask = audioRef.putData(audioFile.bytes!);
+
+      await uploadTask.whenComplete(() => null);
+
+      String audioUrl = await audioRef.getDownloadURL();
+
+      return audioUrl;
+    } catch (e) {
+      print('Error uploading audio: $e');
+      return '';
+    }
+  }
+
+  Future<void> addaudiotoFirestore(String audioUrl) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+
+    CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+    DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+    count = doc['count'];
+    count = count + 1;
+    await doc.reference.update({'count': count});
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    DateTime now = DateTime.now();
+    String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
+    await interactionsCollection.add({
+      'seenStatus': false,
+      'baseText': "",
+      'interactedBy': currentUserId,
+      'interactedWith': widget.selectedUserDetailsDocumentId,
+      'videoUrl': "",
+      'imageUrl': '',
+      'dateTime': now,
+      'message': "",
+      'audioUrl': audioUrl,
+      'groupId': groupId,
+      'isVanish':_isSwitched,
+      'visibility': !_isBlockedByYou,
+      'seenBy':seenBy,
+    });
+  }
+
+  Future<void> changeVanishState() async {
+
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+
+    CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+    DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+    await doc.reference.update({'isVanish': _isSwitched});
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot2 = await messageCount
+        .where('interactedBy', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .where('interactedTo', isEqualTo: currentUserId)
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+    DocumentSnapshot<Map<String, dynamic>> doc2 = querySnapshot2.docs.first;
+    await doc2.reference.update({'isVanish': _isSwitched});
+  }
+
+  void obtainIsVanish() {
+    _isSwitched = widget.isVanish;
+    setState(() {
+      _isSwitched;
+    });
+  }
 }
-
-
-
-
 
 
 

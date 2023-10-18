@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'app_style.dart';
+import 'package:just_audio/just_audio.dart';
 
 class BasePage extends StatelessWidget {
   const BasePage({super.key});
@@ -178,3 +179,109 @@ void shareOnTelegram(String link) async {
   }
 }
 
+
+
+class AudioMessageWidget extends StatefulWidget {
+  final String audioUrl;
+  final AudioPlayer audioPlayer; // Pass the AudioPlayer instance from the parent
+
+  AudioMessageWidget({required this.audioUrl, required this.audioPlayer});
+
+  @override
+  State<AudioMessageWidget> createState() => _AudioMessageWidgetState();
+}
+
+class _AudioMessageWidgetState extends State<AudioMessageWidget> {
+  bool isPlaying = false;
+  Duration audioDuration = const Duration(seconds: 0);
+  Duration audioPosition = const Duration(seconds: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.audioPlayer.setUrl(widget.audioUrl);
+    widget.audioPlayer.playerStateStream.listen((PlayerState state) {
+      if (state.processingState == ProcessingState.completed) {
+        setState(() {
+          isPlaying = false;
+        });
+      }
+    });
+
+    widget.audioPlayer.positionStream.listen((Duration? position) {
+      if (position != null) {
+        setState(() {
+          audioPosition = position;
+        });
+      }
+    });
+
+    widget.audioPlayer.durationStream.listen((Duration? duration) {
+      if (duration != null) {
+        if(mounted) {
+          setState(() {
+            audioDuration = duration;
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _playAudio() async {
+    if (widget.audioPlayer.playing) {
+      await widget.audioPlayer.pause();
+    } else {
+      await widget.audioPlayer.play();
+    }
+    if(mounted) {
+      setState(() {
+        isPlaying = widget.audioPlayer.playing;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double progress = audioDuration.inMilliseconds > 0
+        ? audioPosition.inMilliseconds / audioDuration.inMilliseconds
+        : 0.0;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(width:2)
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: isPlaying ? const Icon(Icons.pause) : const Icon(Icons.play_arrow),
+                onPressed: () {
+                  _playAudio();
+                  if(mounted) {
+                    setState(() {
+                      isPlaying = widget.audioPlayer.playing;
+                    });
+                  }
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: SizedBox(
+                  width: 120,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                    backgroundColor: Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

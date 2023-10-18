@@ -408,10 +408,22 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     );
   }
 
-  sendFriendrequest() {
+  sendFriendrequest() async {
     User? user = auth.currentUser;
     requestedBy = user!.uid;
     requestedTo = widget.userId!;
+
+    CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
+    Map<String, dynamic> data = {
+      'count': 0,
+      'interactedBy': requestedBy,
+      'interactedTo': requestedTo,
+      'isVanish': false,
+    };
+
+    // Add a new document with an auto-generated ID
+    await messages.add(data);
+
     friendStatus = false;
     requestStatus = true;
     requestId = createRequestId(requestedBy, requestedTo);
