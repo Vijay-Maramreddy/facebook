@@ -35,11 +35,11 @@ class AllInteractions extends StatefulWidget {
 }
 
 class _AllInteractionsState extends State<AllInteractions> {
+  final _scrollController = ScrollController();
   Map<String, List<String>> mapOfLists = {};
   String interactedByUserFirstName = "";
   String interactedWithUserFirstName = "";
-  String interactedByUserProfileImageUrl =
-      "https://www.freeiconspng.com/thumbs/profile-icon-png/am-a-19-year-old-multimedia-artist-student-from-manila--21.png";
+  String interactedByUserProfileImageUrl = "assets/profilelogo.png";
 
   late DateTime startDate = DateTime.now();
 
@@ -48,9 +48,25 @@ class _AllInteractionsState extends State<AllInteractions> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     fetchMessengerDetails(widget.groupId);
+    _scrollController.addListener(() {
+      if (_isScrolledToBottom()) {
+        print('Reached the end of the list');
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();  // Dispose the controller when not needed
+    super.dispose();
+  }
+
+  bool _isScrolledToBottom() {
+    // Check if the current position is at the bottom of the list
+    return (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200); // Adjust 200 as needed
   }
 
   @override
@@ -61,7 +77,7 @@ class _AllInteractionsState extends State<AllInteractions> {
           .where('groupId', isEqualTo: widget.groupId)
           .where('visibility', isEqualTo: true)
           .where('dateTime', isGreaterThanOrEqualTo: startDate) // Adjust this condition as needed
-          .orderBy('dateTime')
+          .orderBy('dateTime',descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -72,6 +88,8 @@ class _AllInteractionsState extends State<AllInteractions> {
           return const Center(child: Text('No data available.'));
         } else {
           return ListView.builder(
+            reverse: true,
+            controller: _scrollController,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
@@ -91,7 +109,6 @@ class _AllInteractionsState extends State<AllInteractions> {
               List<String>? interactedWithUserValues = mapOfLists[interactedWithUserId];
               if (interactedWithUserValues != null) {
                 interactedWithUserFirstName = interactedWithUserValues[0]; // First element is the first name
-                // interactedWithUserProfileImageUrl = interactedWithUserValues[1]; // Second element is the profile image URL
               } else {
                 print('No values found for the user with UID: $interactedByUserUid');
               }
@@ -549,11 +566,10 @@ class _AllInteractionsState extends State<AllInteractions> {
 
     for (int i = 0; i < iterationCount; i++) {
       String key = tempSeen.keys.elementAt(i);
-      String? imageUrl = mapOfLists[key]?[1] ?? "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAACCCAMAAAC93eDPAAAAYFBMVEX///8AAACgoKDn5+e1tbU0NDQEBATu7u6RkZElJSX39/evr69ZWVnAwMCXl5dNTU1TU1N7e3tubm46OjorKyvNzc1iYmLa2tofHx/h4eGFhYWLi4tpaWmoqKgXFxdAQEAvJTszAAADjklEQVR4nO2a24KqIBSGPSGGOmmRZjPW+7/lBtGMg2Yzi9oX67uaQZI/1oEFFAQIgiAIgiAIgiAIgiCfg9EyGigp+8DwcV7vwwf2dR6/dfykCB0UybtUxNlODXkmVdEcDk1RkbNq2WVvEXFRo/Gs7OjURrsy46r94l1AMoxDss5+1GVkeJh4FRA3coxbshAALDnK541Ha5ykE/CILvegkbTH7uRLwWCEw4qAQcTBozEy+e5cb2Nd23aGWXLZL/OlYNdqTeUPOV+vZ/JTas3tzo8GaQUy+5n45m01Z6VK0xYTH7Y4SQWaG/R6auwfn1GpAdgnYzG3XIs1YZd0FpAaMx+LwNjBxqbMB9pcJ/YSoc18K/MDpILEnGl2tSVctcjoYd2ByXygtWRhmuoCxP96EMj8AFdGiJWJa65Ib/YkiMSt9+GAa1YsXh9pLa1LgeEtQSRaoDzyOwyPelr+ckvQdVKxZn3DKJABaTjWgoQvvVcCFpjiTcTwq20S2BEqKAo74W+TINNXAaFAOqNZI/VuCb3RrQNySLH2ErOtc0uwqjlure6/onYsvKxyKaisTCQsUQNIEDuW0mrMw9QUkDq+cCn2OH9XwNyRxe1J4HYvGc9/T9LUrBMUjvzYOj4s6oYnteYGxFxWrvY8fFip5F9Ov6tcVnyVfim2S30O3CMVdqS+TrRYerB6FlAvWLwxF45fSjgsPYuj5iZoosX8c/AtQUAFK4+hJDgNkTfau6PG6Y4ghnC6I1XrVC3294yJnb3yii/bHiDu6ArKno+BGJ45Ifw8/cet4UCC0k5NtA4XqY2uIKnJStAtWVYg5GqrJUyCNpepNrRXqJlUz9Mwy5SxWLcr448qHjQALdZayUJXrTDaYrY+gSlZtMKtWLPCZIt7EEMVbo/l60LZajKVsVDlqyzij8qt46dTME6E+upwRfy8lVlJCDr1pB3qjGHa0MVbFSgPYHAbuvu2Nnvui6MhBueB3NYOm3sWsP3Tse/sRXfIzf14xLGwo3fTAh9xDAc9SfSKhGj4CJyCofQgGxLjjOwNetw1BOarAB/6DUefLwJ+HJ+sLtIOPBzGZ6/Nga+j+M2pyY8CFZrmiadj/NSPFRTyYmhDveDxYmi6HnuGz+ux4H4C75yLsdHvJaHksi7B/1Vp8HBhbPOmC+PgP7g2Vyo+/OOBEUbLXv6Cov/MTygQBEEQBEEQBEEQBEEm/gGUkR/mnEH+bwAAAABJRU5ErkJggg=="; // Replace with actual default image URL
+      String? imageUrl = mapOfLists[key]?[1] ?? "assets/profilelogo.png";
       DateTime? value = tempSeen[key];
 
       Widget container = Container(
-        // alignment: Alignment.centerRight,
         width: 30,
         height: 30,
         decoration: BoxDecoration(
@@ -565,7 +581,7 @@ class _AllInteractionsState extends State<AllInteractions> {
         ),
         child: ClipOval(
           child: Image.network(
-            imageUrl!,
+            imageUrl,
             width: 30,
             height: 30,
             fit: BoxFit.cover,

@@ -133,7 +133,7 @@ class _ChatPageState extends State<ChatPage> {
                                           return Container();
                                         }
                                         List? list1 = resultMap[key];
-                                        int? value = list1?[0];
+                                        int? value = list1?[0]??0;
 
                                         return Padding(
                                           padding: const EdgeInsets.all(10),
@@ -201,7 +201,7 @@ class _ChatPageState extends State<ChatPage> {
                                                         ),
                                                         SizedBox(
                                                           child: Visibility(
-                                                            visible: !blockedList.contains(allUsersQuerySnapshot.docs[index].id),
+                                                            visible: !blockedList.contains(allUsersQuerySnapshot.docs[index].id) && value!>0,
                                                             child: Text("$value", style: const TextStyle(color: Colors.red)),
                                                           ),
                                                         )
@@ -267,11 +267,9 @@ class _ChatPageState extends State<ChatPage> {
                                     padding: const EdgeInsets.all(10),
                                     child: ElevatedButton(
                                       onPressed: () {
-                                        print("the group id is :$clickedGroupId");
                                         isGroup = true;
                                         setState(() {
                                           clickedGroupId;
-                                          // clickedGroupId = clickedGroupId!;
                                           isGroup;
                                           selectedGroupDocument = groupData; // Update selectedGroupDocument
                                           groupData[3] = 0;
@@ -313,7 +311,10 @@ class _ChatPageState extends State<ChatPage> {
                                                 style: const TextStyle(fontSize: 26),
                                               ),
                                             ),
-                                            if (groupData[3] > 0) Text("(${groupData[3]})", style: const TextStyle(color: Colors.red)),
+                                            Visibility(
+                                              visible:groupData[3]>0?true:false ,
+                                                child: Text("(${groupData[3]})", style: const TextStyle(color: Colors.red))
+                                            ),
                                           ],
                                         ),
                                       ),

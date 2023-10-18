@@ -159,20 +159,17 @@ class _ChatWidgetState extends State<ChatWidget> {
               ),
               Column(
                 children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.vertical, // Change to vertical scroll
-                    child: SizedBox(
-                      height: 480,
-                      child: Center(
-                        child: AllInteractions(
-                          interactedBy: currentUserId,
-                          interactedWith: widget.selectedUserDetailsDocumentId,
-                          groupId: widget.groupId,
-                          oppositeBlocked: oppositeBlocked,
-                          youBlocked: _isBlockedByYou,
-                          string: text,
-                          media: media,
-                        ),
+                  SizedBox(
+                    height: 480,
+                    child: Center(
+                      child: AllInteractions(
+                        interactedBy: currentUserId,
+                        interactedWith: widget.selectedUserDetailsDocumentId,
+                        groupId: widget.groupId,
+                        oppositeBlocked: oppositeBlocked,
+                        youBlocked: _isBlockedByYou,
+                        string: text,
+                        media: media,
                       ),
                     ),
                   ),

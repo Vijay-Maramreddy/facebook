@@ -122,13 +122,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
           ),
           Column(
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.vertical, // Change to vertical scroll
-                child: SizedBox(
-                  height: 500,
-                  child: Center(
-                    child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.clickedGroupId, groupId: widget.clickedGroupId,oppositeBlocked:const [],youBlocked:false,string: text,media:media),
-                  ),
+              SizedBox(
+                height: 500,
+                child: Center(
+                  child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.clickedGroupId, groupId: widget.clickedGroupId,oppositeBlocked:const [],youBlocked:false,string: text,media:media),
                 ),
               ),
               Row(children: [
