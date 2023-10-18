@@ -6,6 +6,7 @@ import 'dart:js_interop';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
@@ -35,7 +36,6 @@ class AllInteractions extends StatefulWidget {
 }
 
 class _AllInteractionsState extends State<AllInteractions> {
-  final _scrollController = ScrollController();
   Map<String, List<String>> mapOfLists = {};
   String interactedByUserFirstName = "";
   String interactedWithUserFirstName = "";
@@ -50,23 +50,6 @@ class _AllInteractionsState extends State<AllInteractions> {
   void initState() {
     super.initState();
     fetchMessengerDetails(widget.groupId);
-    _scrollController.addListener(() {
-      if (_isScrolledToBottom()) {
-        print('Reached the end of the list');
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();  // Dispose the controller when not needed
-    super.dispose();
-  }
-
-  bool _isScrolledToBottom() {
-    // Check if the current position is at the bottom of the list
-    return (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200); // Adjust 200 as needed
   }
 
   @override
@@ -76,12 +59,12 @@ class _AllInteractionsState extends State<AllInteractions> {
           .collection('interactions')
           .where('groupId', isEqualTo: widget.groupId)
           .where('visibility', isEqualTo: true)
-          .where('dateTime', isGreaterThanOrEqualTo: startDate) // Adjust this condition as needed
+          .where('dateTime', isGreaterThanOrEqualTo: startDate)
           .orderBy('dateTime',descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator()); // Show a loading indicator while data is loading
+          return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -89,7 +72,6 @@ class _AllInteractionsState extends State<AllInteractions> {
         } else {
           return ListView.builder(
             reverse: true,
-            controller: _scrollController,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
@@ -179,7 +161,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   AudioMessageWidget(audioUrl: data['audioUrl'], audioPlayer: audioPlayer)
                                 else if (data['videoUrl'] != "" && data['videoUrl']!=null)
                                   SizedBox(
-                                    child: buildVideoUrl(data['videoUrl'], data, tempSeen),
+                                    child: buildVideoUrl(data['videoUrl'], data),
                                   )
                                 else if (data['imageUrl'] == "" && data['videoUrl'] == "")
                                   if (data['message']!.startsWith('https://'))
@@ -194,63 +176,58 @@ class _AllInteractionsState extends State<AllInteractions> {
                                   SizedBox(
                                     child: buildImage(data['imageUrl'], data['message']),
                                   ),
-                                Column(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ShowUserDetailsPage(
-                                              userId: data['interactedBy'],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        margin: const EdgeInsets.all(10.0),
-                                        padding: const EdgeInsets.all(10.0),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue,
-                                          border: Border.all(color: Colors.black),
-                                          borderRadius: BorderRadius.circular(10.0),
-                                        ),
-                                        height: 60,
-                                        // width: 1400,
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 30,
-                                              height: 30,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: Colors.blue,
-                                                  width: 0.1,
-                                                ),
-                                              ),
-                                              child: ClipOval(
-                                                child: Image.network(
-                                                  interactedByUserProfileImageUrl,
-                                                  width: 30,
-                                                  height: 30,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              width: 20,
-                                            ),
-                                            Text(
-                                              interactedByUserFirstName,
-                                              style: const TextStyle(fontSize: 20),
-                                            ),
-                                          ],
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ShowUserDetailsPage(
+                                          userId: data['interactedBy'],
                                         ),
                                       ),
+                                    );
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.all(10.0),
+                                    padding: const EdgeInsets.all(10.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue,
+                                      border: Border.all(color: Colors.black),
+                                      borderRadius: BorderRadius.circular(10.0),
                                     ),
-                                    Text("${data['dateTime'].toDate()}"),
-                                  ],
+                                    height: 60,
+                                    // width: 1400,
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 30,
+                                          height: 30,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.blue,
+                                              width: 0.1,
+                                            ),
+                                          ),
+                                          child: ClipOval(
+                                            child: Image.network(
+                                              interactedByUserProfileImageUrl,
+                                              width: 30,
+                                              height: 30,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          width: 20,
+                                        ),
+                                        Text(
+                                          interactedByUserFirstName,
+                                          style: const TextStyle(fontSize: 20),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                                 if (data['seenStatus'] == false)
                                   const Icon(Icons.check)
@@ -261,17 +238,23 @@ class _AllInteractionsState extends State<AllInteractions> {
                                       Icon(Icons.check, color: Colors.blue),
                                     ],
                                   ),
-
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(DateFormat('yyyy-MM-dd HH:mm').format(data['dateTime'].toDate()),),
+                                SizedBox(width: 36,)
                               ],
                             ),
                             buildSeenByWidget(tempSeen, mapOfLists),
                           ],
                         )
                       else if (data['interactedBy'] != widget.interactedBy)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
+                        Column(
                           children: [
-                            Column(
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
                               children: [
                                 GestureDetector(
                                   onTap: () {
@@ -327,31 +310,36 @@ class _AllInteractionsState extends State<AllInteractions> {
                                     ),
                                   ),
                                 ),
-                                Text("${data['dateTime'].toDate()}"),
+                                if (data['audioUrl'] != "")
+                                  AudioMessageWidget(
+                                    audioUrl: data['audioUrl'],
+                                    audioPlayer: audioPlayer,
+                                  )
+                                else if (data['videoUrl'] != "" && data['videoUrl']!=null)
+                                  SizedBox(
+                                    child: buildVideoUrl(data['videoUrl'], data),
+                                  )
+                                else if (data['imageUrl'] == "")
+                                  if (data['message']!.startsWith('https://'))
+                                    SizedBox(
+                                      child: buildMessageUrl(data['message']),
+                                    )
+                                  else
+                                    SizedBox(
+                                      child: buildMessage(data['message']),
+                                    )
+                                else
+                                  SizedBox(
+                                    child: buildImage(data['imageUrl'], data['message']),
+                                  ),
                               ],
                             ),
-                            if (data['audioUrl'] != "")
-                              AudioMessageWidget(
-                                audioUrl: data['audioUrl'],
-                                audioPlayer: audioPlayer,
-                              )
-                            else if (data['videoUrl'] != "" && data['videoUrl']!=null)
-                              SizedBox(
-                                child: buildVideoUrl(data['videoUrl'], data, {}),
-                              )
-                            else if (data['imageUrl'] == "")
-                              if (data['message']!.startsWith('https://'))
-                                SizedBox(
-                                  child: buildMessageUrl(data['message']),
-                                )
-                              else
-                                SizedBox(
-                                  child: buildMessage(data['message']),
-                                )
-                            else
-                              SizedBox(
-                                child: buildImage(data['imageUrl'], data['message']),
-                              ),
+                            Row(
+                              children: [
+                                const SizedBox(width:10 ,),
+                                Text(DateFormat('yyyy-MM-dd HH:mm').format(data['dateTime'].toDate()),),
+                              ],
+                            )
                           ],
                         ),
                       if (widget.youBlocked)
@@ -417,7 +405,6 @@ class _AllInteractionsState extends State<AllInteractions> {
       if (userDocument['groupMembers'] != null) {
         Map<String, dynamic> groupMembersMap = userDocument['groupMembers'];
         userMembers = groupMembersMap.keys.toList();
-        // userMembers = List<String>.from(userDocument['groupMembers']);
       }
       setState(() {
         startDate;
@@ -481,7 +468,7 @@ class _AllInteractionsState extends State<AllInteractions> {
     }
   }
 
-  Widget buildVideoUrl(String urlString, Map<String, dynamic> data, Map<String, DateTime> tempSeen) {
+  Widget buildVideoUrl(String urlString, Map<String, dynamic> data) {
     return Column(
       children: [
         Container(
@@ -493,7 +480,6 @@ class _AllInteractionsState extends State<AllInteractions> {
           height: 330,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: VideoContainer(
-            // alignment: 'right',
             videoUrl: urlString,
           ),
         ),
@@ -559,9 +545,9 @@ class _AllInteractionsState extends State<AllInteractions> {
 
   Widget buildSeenByWidget(Map<String, DateTime> tempSeen, Map<String, List<String>> mapOfLists) {
     int seenCount = tempSeen.length;
+    print("seen count is $seenCount");
     int iterationCount = seenCount <= 3 ? seenCount : 3;
     int remainingCount = seenCount - iterationCount;
-
     List<Widget> seenWidgets = [];
 
     for (int i = 0; i < iterationCount; i++) {
@@ -628,7 +614,7 @@ class _AllInteractionsState extends State<AllInteractions> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          alignment: Alignment.centerRight,
+          // alignment: Alignment.centerRight,
           title: const Text("Seen By"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -658,7 +644,7 @@ class _AllInteractionsState extends State<AllInteractions> {
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text("Close"),
+              child: const Text("Close"),
             ),
           ],
         );
