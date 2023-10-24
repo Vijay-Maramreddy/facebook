@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -117,12 +116,18 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       'interactedBy': userId,
       'interactedWith':retrievedDoc.userId,
       'imageUrl':retrievedDoc.imageUrl,
-      'dateTime':formattedDateTime,
       'message':comment,
       'groupId':groupId,
+      'dateTime': DateTime.now(),
+      'seenStatus': false,
+      'baseText': "",
+      'videoUrl': '',
+      'audioUrl': '',
+      'visibility': true,
+      'seenBy':{},
+      'isVanish':false,
     });
 
-    // Save the comment to the Firestore collection
     await FirebaseFirestore.instance
         .collection('images')
         .doc(widget.documentsId) // Replace with the actual image document ID
@@ -185,12 +190,12 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
                 }).toList(),
               ),
             ),
-            Container(
+            SizedBox(
               height: 100,  // Set a fixed height for the emoji picker
               child: Row(
                 children: [
                   Expanded(
-                    child: Container(
+                    child: SizedBox(
                       width: 300,
                       height: 100,
                       child: TextField(

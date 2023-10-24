@@ -18,8 +18,6 @@ class ReelsPage extends StatefulWidget {
 
 class _ReelsPageState extends State<ReelsPage> {
   XFile? _videoFile;
-  String? _title;
-  String? _videoDownloadURL;
 
   Future<XFile?> pickVideoFromGallery() async {
     XFile? videoFile = await ImagePicker().pickVideo(source: ImageSource.gallery);
@@ -27,7 +25,6 @@ class _ReelsPageState extends State<ReelsPage> {
   }
 
   Future<String?> uploadVideoToStorage(String childName, XFile videoFile) async {
-    String uuid = AppStyles.uuid();
     final bytes = await videoFile.readAsBytes();
     FirebaseStorage storage = FirebaseStorage.instance;
     var videoFileName = '${DateTime.now()}.mp4';

@@ -1,15 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:facebook/Authentication/create_account_page.dart';
 import 'package:facebook/Authentication/login_page.dart';
 import 'package:facebook/home/home_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'Authentication/password_reset.dart';
-import 'base_page.dart';
+const agoraAppId = "YOUR_AGORA_APP_ID";
+
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +23,11 @@ Future main() async {
   } else {
     await Firebase.initializeApp();
   }
-  runApp(MaterialApp(title: 'FaceBook',home: MyApp(),));
+
+  // await AgoraRtcEngine.create(agoraAppId);
+  runApp(const MaterialApp(title: 'FaceBook',home: MyApp(),));
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FaceBook',
-      builder: (context, child) => openScreen(),
+      builder: (context, child) => const openScreen(),
     );
   }
 }

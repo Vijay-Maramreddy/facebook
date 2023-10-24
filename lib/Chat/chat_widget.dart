@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
 import '../app_style.dart';
@@ -37,21 +38,24 @@ class ChatWidget extends StatefulWidget {
 }
 
 class _ChatWidgetState extends State<ChatWidget> {
-
   final TextEditingController _messageController = TextEditingController();
   Uint8List? image;
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  VideoPlayerController? _videoPlayerController;
   String text = "";
   String media = "";
   String audioLink = "";
   bool? _isSwitched = false;
-  Map<String,DateTime> seenBy={};
+  Map<String, DateTime> seenBy = {};
+  late String callBackDocumentId = "";
+  late bool isReply = false;
 
   late int count;
   late final bool _isBlockedByYou = widget.isBlockedByYou!;
   late List<String> oppositeBlocked = [];
+  late String callBackMessage = "";
+  late DocumentSnapshot? callBackSnapshot = null;
+  final AudioPlayer audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -106,7 +110,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                       height: 60,
-                      width: 700,
+                      width: 350,
                       child: Row(
                         children: [
                           Container(
@@ -140,6 +144,40 @@ class _ChatWidgetState extends State<ChatWidget> {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  ElevatedButton(
+                      onPressed: () {
+                        (media == "images") ? (media = "") : (media = "images");
+                        setState(() {
+                          media;
+                        });
+                      },
+                      child: const Text("Show Images")),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                      onPressed: () {
+                        (media == "videos") ? (media = "") : (media = "videos");
+                        setState(() {
+                          media;
+                        });
+                      },
+                      child: const Text("Show Videos")),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      onChanged: (value) {
+                        setState(() {
+                          text = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
@@ -152,7 +190,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                           });
                         },
                       ),
-                      Text('Switch is $_isSwitched'),
+                      Text('Disappearing mode Switched $_isSwitched'),
                     ],
                   ),
                 ],
@@ -160,7 +198,7 @@ class _ChatWidgetState extends State<ChatWidget> {
               Column(
                 children: [
                   SizedBox(
-                    height: 480,
+                    height: 410,
                     child: Center(
                       child: AllInteractions(
                         interactedBy: currentUserId,
@@ -170,9 +208,56 @@ class _ChatWidgetState extends State<ChatWidget> {
                         youBlocked: _isBlockedByYou,
                         string: text,
                         media: media,
+                        updateState: updateState,
                       ),
                     ),
                   ),
+                  if (callBackSnapshot != null)
+                    Container(
+                      height: 80,
+                      margin: const EdgeInsets.all(2.0),
+                      padding: const EdgeInsets.all(2.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white60,
+                        border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(2.0),
+                      ),
+                      child: SingleChildScrollView(
+                        child: Row(
+                          children: [
+                            if (callBackSnapshot?['audioUrl'] != "")
+                              AudioMessageWidget(audioUrl: callBackSnapshot?['audioUrl'], audioPlayer: audioPlayer)
+                            else if (callBackSnapshot?['videoUrl'] != "" && callBackSnapshot?['videoUrl'] != null)
+                              SizedBox(
+                                child: Text(callBackSnapshot?['message']),
+                                // child: buildVideoUrl(callBackSnapshot?['videoUrl'], callBackSnapshot as Map<String, dynamic>),
+                              )
+                            else if (callBackSnapshot?['imageUrl'] == "" && callBackSnapshot?['videoUrl'] == "")
+                              if (callBackSnapshot?['message']!.startsWith('https://'))
+                                SizedBox(
+                                  child: buildMessageUrl(callBackSnapshot?['message']),
+                                )
+                              else
+                                SizedBox(
+                                  child: buildMessage(callBackSnapshot?['message']),
+                                )
+                            else
+                              SizedBox(
+                                child: buildImage(callBackSnapshot?['imageUrl'], callBackSnapshot?['message']),
+                              ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  callBackDocumentId = "";
+                                  callBackSnapshot = null;
+                                });
+                              },
+                              icon: const Icon(Icons.cancel),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
                   Visibility(
                     visible: (!_isBlockedByYou) && (!oppositeBlocked.contains(currentUserId)),
                     child: Row(children: [
@@ -181,7 +266,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                         margin: const EdgeInsets.all(10),
                         alignment: Alignment.center,
                         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                        width: 750,
+                        width: 700,
                         height: 45,
                         child: Row(
                           children: [
@@ -192,27 +277,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                                   hintText: 'Enter a message',
                                   border: InputBorder.none,
                                 ),
+                                onSubmitted: (text){sendMessageOrIcon();},
                               ),
                             ),
-                            IconButton(
-                              padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
-                              icon: const Icon(Icons.emoji_emotions), // Emoji icon
-                              onPressed: () {
-                                openEmojiPicker(context); // Open the emoji picker modal bottom sheet
-                              },
-                            ),
-                            IconButton(
-                              padding: const EdgeInsets.fromLTRB(0, 0, 0, 6),
-                              onPressed: uploadImageAndSaveUrl,
-                              icon: const Icon(Icons.add_a_photo),
-                            ),
-                            IconButton(
-                              padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
-                              onPressed: () async {
-                                await uploadVideoAndSaveUrl();
-                              },
-                              icon: const Icon(Icons.video_library),
-                            )
+
                           ],
                         ),
                       ),
@@ -221,6 +289,25 @@ class _ChatWidgetState extends State<ChatWidget> {
                             sendMessageOrIcon();
                           },
                           icon: const Icon(Icons.send)),
+                      IconButton(
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
+                        icon: const Icon(Icons.emoji_emotions), // Emoji icon
+                        onPressed: () {
+                          openEmojiPicker(context); // Open the emoji picker modal bottom sheet
+                        },
+                      ),
+                      IconButton(
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 6),
+                        onPressed: uploadImageAndSaveUrl,
+                        icon: const Icon(Icons.add_a_photo),
+                      ),
+                      IconButton(
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
+                        onPressed: () async {
+                          await uploadVideoAndSaveUrl();
+                        },
+                        icon: const Icon(Icons.video_library),
+                      ),
                       IconButton(
                         onPressed: () async {
                           await sendMessageWithLocation();
@@ -259,7 +346,6 @@ class _ChatWidgetState extends State<ChatWidget> {
       String? message = await _showImagePickerDialog();
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
-      String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? imageUrl = await uploadImageToStorage('postImages/$uuid', image!);
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
@@ -277,7 +363,13 @@ class _ChatWidgetState extends State<ChatWidget> {
         'videoUrl': '',
         'audioUrl': '',
         'visibility': !_isBlockedByYou,
-        'seenBy':seenBy,
+        'seenBy': seenBy,
+        'isVanish': _isSwitched,
+        'replyTo': callBackDocumentId,
+      });
+      setState(() {
+        callBackSnapshot = null;
+        callBackDocumentId = "";
       });
     } else {
       print('No image picked.');
@@ -339,6 +431,10 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (locationMessage != null) {
       // Send the location message to Firebase
       await sendMessage(locationMessage);
+      setState(() {
+        callBackSnapshot = null;
+        callBackDocumentId = "";
+      });
     } else {
       print('Unable to retrieve location.');
     }
@@ -376,9 +472,10 @@ class _ChatWidgetState extends State<ChatWidget> {
       'groupId': groupId,
       'videoUrl': '',
       'audioUrl': '',
-      'isVanish':_isSwitched,
+      'isVanish': _isSwitched,
       'visibility': !_isBlockedByYou,
-      'seenBy':seenBy,
+      'seenBy': seenBy,
+      'replyTo': callBackDocumentId,
     });
     // Clear the text field after sending the message
     _messageController.clear();
@@ -405,7 +502,6 @@ class _ChatWidgetState extends State<ChatWidget> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Display the video using ChewieController
                 SizedBox(
                   width: 500,
                   height: 400,
@@ -457,7 +553,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (video != null) {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
-      String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? videoUrl = await uploadVideoToStorage('videos/$uuid', video!);
       String? message = await _showVideoPickerDialog(videoUrl);
 
@@ -476,19 +571,23 @@ class _ChatWidgetState extends State<ChatWidget> {
           'imageUrl': '',
           'dateTime': now,
           'message': message,
-          'isVanish':_isSwitched,
+          'isVanish': _isSwitched,
           'groupId': groupId,
           'visibility': !_isBlockedByYou,
-          'seenBy':seenBy,
+          'seenBy': seenBy,
+          'replyTo': callBackDocumentId,
         });
       }
+      setState(() {
+        callBackSnapshot = null;
+        callBackDocumentId = "";
+      });
     } else {
       print('No video picked.');
     }
   }
 
   Future<String?> uploadVideoToStorage(String childName, XFile videoFile) async {
-    String uuid = AppStyles.uuid();
     final bytes = await videoFile.readAsBytes();
     FirebaseStorage storage = FirebaseStorage.instance;
     var videoFileName = const Uuid().v4();
@@ -568,7 +667,6 @@ class _ChatWidgetState extends State<ChatWidget> {
     await doc.reference.update({'count': count});
 
     DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     String? imageUrl = '';
@@ -586,12 +684,17 @@ class _ChatWidgetState extends State<ChatWidget> {
         'groupId': groupId,
         'videoUrl': '',
         'audioUrl': '',
-        'isVanish':_isSwitched,
+        'isVanish': _isSwitched,
         'visibility': !_isBlockedByYou,
-        'seenBy':seenBy,
+        'seenBy': seenBy,
+        'replyTo': callBackDocumentId,
       });
       _messageController.clear();
     }
+    setState(() {
+      callBackSnapshot = null;
+      callBackDocumentId = "";
+    });
   }
 
   Future<void> getOppositeBlockList() async {
@@ -610,16 +713,16 @@ class _ChatWidgetState extends State<ChatWidget> {
     CollectionReference interactions = FirebaseFirestore.instance.collection('interactions');
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-    QuerySnapshot querySnapshot1 =
-    await interactions.where('groupId', isEqualTo: widget.groupId)
+    QuerySnapshot querySnapshot1 = await interactions
+        .where('groupId', isEqualTo: widget.groupId)
         .where('interactedBy', isEqualTo: currentUserId)
-        .where('isVanish',isEqualTo: true)
-        .where('seenStatus',isEqualTo: true).get();
+        .where('isVanish', isEqualTo: true)
+        .where('seenStatus', isEqualTo: true)
+        .get();
     for (QueryDocumentSnapshot doc in querySnapshot1.docs) {
       await doc.reference.delete();
       print('Document deleted: ${doc.id}');
     }
-
 
     QuerySnapshot querySnapshot =
         await interactions.where('groupId', isEqualTo: widget.groupId).where('interactedWith', isEqualTo: currentUserId).get();
@@ -644,13 +747,13 @@ class _ChatWidgetState extends State<ChatWidget> {
     if (result != null && result.files.isNotEmpty) {
       final PlatformFile audioFile = result.files.first;
       String audioUrl = await _uploadAudioToStorage(audioFile);
-      addaudiotoFirestore(audioUrl);
+      addAudioToFireStore(audioUrl);
     }
   }
 
   Future<String> _uploadAudioToStorage(PlatformFile audioFile) async {
     try {
-      Reference audioRef = FirebaseStorage.instance.ref().child('audio').child(audioFile.name ?? 'audio_file.mp3');
+      Reference audioRef = FirebaseStorage.instance.ref().child('audio').child(audioFile.name);
       UploadTask uploadTask = audioRef.putData(audioFile.bytes!);
 
       await uploadTask.whenComplete(() => null);
@@ -664,7 +767,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 
-  Future<void> addaudiotoFirestore(String audioUrl) async {
+  Future<void> addAudioToFireStore(String audioUrl) async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
 
@@ -692,14 +795,18 @@ class _ChatWidgetState extends State<ChatWidget> {
       'message': "",
       'audioUrl': audioUrl,
       'groupId': groupId,
-      'isVanish':_isSwitched,
+      'isVanish': _isSwitched,
       'visibility': !_isBlockedByYou,
-      'seenBy':seenBy,
+      'seenBy': seenBy,
+      'replyTo': callBackDocumentId,
+    });
+    setState(() {
+      callBackSnapshot = null;
+      callBackDocumentId = "";
     });
   }
 
   Future<void> changeVanishState() async {
-
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
 
@@ -720,52 +827,34 @@ class _ChatWidgetState extends State<ChatWidget> {
     await doc2.reference.update({'isVanish': _isSwitched});
   }
 
+  void updateState(String documentId) {
+    callBackDocumentId = documentId;
+    fetchCallBackDocument();
+    setState(() {
+      callBackDocumentId;
+      isReply = true;
+    });
+  }
+
   void obtainIsVanish() {
     _isSwitched = widget.isVanish;
     setState(() {
       _isSwitched;
+      print(_isSwitched);
+    });
+  }
+
+  Future<void> fetchCallBackDocument() async {
+    DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('interactions').doc(callBackDocumentId).get();
+    callBackSnapshot = snapshot;
+    String tempVideoUrl=callBackSnapshot?['videoUrl'];
+    if(tempVideoUrl!="")
+      {
+        print("the video url is :$tempVideoUrl");
+      }
+    setState(() {
+      callBackSnapshot;
+      print("the call back snapshot id is ${callBackSnapshot?.id}");
     });
   }
 }
-
-
-
-
-
-
-
-
-
-// ElevatedButton(
-//     onPressed: () {
-//       (media == "images") ? (media = "") : (media = "images");
-//       setState(() {
-//         media;
-//       });
-//     },
-//     child: Text("Show Images")),
-// const SizedBox(width: 10),
-// ElevatedButton(
-//     onPressed: () {
-//       (media == "videos") ? (media = "") : (media = "videos");
-//       setState(() {
-//         media;
-//       });
-//     },
-//     child: Text("Show Videos")),
-// const SizedBox(width: 10),
-// Expanded(
-//   child: TextField(
-//     onChanged: (value) {
-//       setState(() {
-//         text = value; // Update the string variable as text changes
-//       });
-//     },
-//     decoration: InputDecoration(
-//       hintText: 'Search...',
-//       border: OutlineInputBorder(
-//         borderRadius: BorderRadius.circular(10.0),
-//       ),
-//     ),
-//   ),
-// ),

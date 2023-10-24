@@ -1,13 +1,17 @@
 import 'dart:async';
-import 'package:facebook/Posts/comment_input_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../app_style.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 import 'image_document_model.dart';
-import 'package:facebook/home/home_page.dart';
+
+import 'image_page_view_dialog.dart';
 
 class StatusCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
@@ -21,68 +25,66 @@ class StatusCollectionWidget extends StatefulWidget {
 }
 
 class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late String profileImageUrl = '';
   late String firstName = '';
   late final List<String> friendsIds;
+  bool status=true;
+  late Uint8List _image;
+  late Uint8List imageFile;
+  late String title;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+  User? user=FirebaseAuth.instance.currentUser;
+
+  Map<String, DocumentSnapshot> snapshotMap = {};
 
   @override
   void initState() {
     // TODO: implement initState
     friendsIds = widget.friendsIds;
+    performQuery();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('images').where('status', isEqualTo: true).orderBy('dateTime', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
-          }
-          if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Container(
-              padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-              width: 800,
-              height: 180,
-              child: Column(
-                children: [
-                  Text("no status available now, try creating your own Status"),
-                  IconButton(
-                      onPressed: () {
-                        onPressedUploadStatus();
-                      },
-                      icon: Icon(Icons.add_a_photo))
-                ],
+    if (!snapshotMap.containsKey(user?.uid)) {
+      return Row(
+        children: [
+          GestureDetector(
+            onTap: uploadAStatus,
+            child: ClipOval(
+              child: Image.network(
+                "assets/newStatusLogo.png",
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
               ),
-            );
-          }
-          return Container(
+            ),
+          ),
+          Container(
             padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-            width: 800,
+            width: 680,
             height: 180,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: snapshot.data!.docs.length,
+              itemCount: snapshotMap.length,
               itemBuilder: (context, index) {
-                final document = snapshot.data!.docs[index];
-                String documentId = snapshot.data!.docs[index].id;
-                String postUserId = document['userId'];
+                final List<String> documentIds = snapshotMap.keys.toList();
+                final String documentId = documentIds[index];
+                final DocumentSnapshot<Object?>? document = snapshotMap[documentId];
+                final String postUserId = document?['userId'];
 
                 return FutureBuilder<UserProfileDetails>(
                   future: getProfileDetails(postUserId),
                   builder: (context, profileDetailsSnapshot) {
                     if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator();
+                      return const CircularProgressIndicator();
                     } else if (profileDetailsSnapshot.hasError) {
                       return Text('Error: ${profileDetailsSnapshot.error}');
                     } else {
                       DateTime now = DateTime.now();
-                      var commentDateTime = DateTime.parse(document['dateTime'] as String);
+                      var commentDateTime = DateTime.parse(document?['dateTime'] as String);
                       var difference = now.difference(commentDateTime);
                       if (difference.inHours >= 48) {
                         deletePost(documentId);
@@ -94,16 +96,14 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                       String? firstName = userDetails?.firstName;
                       return buildImageCard(
                         ImageDocument(
-                          imageUrl: document['imageUrl'],
-                          title: document['title'],
-                          userId: document['userId'],
-                          likes: document['likes'],
-                          likedBy: (document['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
-                          // firstName: document['firstName'],
-                          // profileImageUrl: document['profileImageUrl'],
-                          commentsCount: document['commentsCount'],
+                          imageUrl: document?['imageUrl'],
+                          title: document?['title'],
+                          userId: document?['userId'],
+                          likes: document?['likes'],
+                          likedBy: (document?['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
+                          commentsCount: document?['commentsCount'],
                           dateTime: formattedTime,
-                          status: document['status'],
+                          status: document?['status'],
                         ),
                         documentsId: documentId,
                         postProfileImageUrl: profileImageUrl,
@@ -114,16 +114,212 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                 );
               },
             ),
+          ),
+        ],
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+        width: 800,
+        height: 180,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: snapshotMap.length,
+          itemBuilder: (context, index) {
+            final List<String> documentIds = snapshotMap.keys.toList();
+            final String documentId = documentIds[index];
+            final DocumentSnapshot<Object?>? document = snapshotMap[documentId];
+            final String postUserId = document?['userId'];
+
+            return FutureBuilder<UserProfileDetails>(
+              future: getProfileDetails(postUserId),
+              builder: (context, profileDetailsSnapshot) {
+                if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                } else if (profileDetailsSnapshot.hasError) {
+                  return Text('Error: ${profileDetailsSnapshot.error}');
+                } else {
+                  DateTime now = DateTime.now();
+                  var commentDateTime = DateTime.parse(document?['dateTime'] as String);
+                  var difference = now.difference(commentDateTime);
+                  if (difference.inHours >= 48) {
+                    deletePost(documentId);
+                    return Container();
+                  } else {}
+                  String formattedTime = _formatTimeDifference(difference);
+                  UserProfileDetails? userDetails = profileDetailsSnapshot.data;
+                  String? profileImageUrl = userDetails?.profileImageUrl;
+                  String? firstName = userDetails?.firstName;
+                  return buildImageCard(
+                    ImageDocument(
+                      imageUrl: document?['imageUrl'],
+                      title: document?['title'],
+                      userId: document?['userId'],
+                      likes: document?['likes'],
+                      likedBy: (document?['likedBy'] as List<dynamic>).map((isLikedBy) => isLikedBy.toString()).toList(),
+                      commentsCount: document?['commentsCount'],
+                      dateTime: formattedTime,
+                      status: document?['status'],
+                    ),
+                    documentsId: documentId,
+                    postProfileImageUrl: profileImageUrl,
+                    postFirstName: firstName,
+                  );
+                }
+              },
+            );
+          },
+        ),
+      );
+    }
+  }
+
+  void uploadAStatus() {
+    status = true;
+    uploadImageAndSaveUrl().then((_) {
+      setState(() {
+        performQuery();
+      });
+    });
+  }
+
+   uploadImageAndSaveUrl() async {
+    imageFile = await pickImageFromGallery();
+
+    if (imageFile != null) {
+      String? title = await _showImagePickerDialog();
+      int likes = 0;
+
+      List<String> likedBy = [];
+      late String profileImageUrl;
+      late String firstName;
+      int commentsCount = 0;
+      String uuid = AppStyles.uuid();
+      DateTime now = DateTime.now();
+      String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
+      String? imageUrl = await uploadImageToStorage('postImages/$uuid', imageFile);
+      int shareCount = 0;
+      if (imageUrl != null) {
+        CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          DocumentSnapshot documentSnapshot = await usersCollection.doc(user.uid).get();
+          if (documentSnapshot.exists) {
+            Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
+            if (data != null) {
+              profileImageUrl = data['profileImageUrl'];
+              firstName = data['firstName'];
+            } else {
+              if (kDebugMode) {
+                print('Document data is null.');
+              }
+            }
+          } else {
+            String message = "user details not found";
+            showAlert(_scaffoldKey.currentContext!, message);
+          }
+          await addImageUrlToFirebase(
+              user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status, shareCount);
+          setState(() {});
+        } else {
+          if (kDebugMode) {
+            print('Error: User is not authenticated.');
+          }
+        }
+      } else {
+        if (kDebugMode) {
+          print('Error uploading image.');
+        }
+      }
+    } else {
+      if (kDebugMode) {
+        print('No image picked.');
+      }
+    }
+  }
+
+  Future<void> addImageUrlToFirebase(String userId, String imageUrl, String title, int likes, int commentsCount, String dateTime,
+      List<String> likedBy, String profileImageUrl, String firstName, bool status, int shareCount) async {
+    final CollectionReference imagesCollection = FirebaseFirestore.instance.collection('images');
+
+    // Add a new document to the 'images' collection
+    await imagesCollection.add({
+      'imageUrl': imageUrl,
+      'userId': userId,
+      'title': title,
+      'likes': likes,
+      'commentsCount': commentsCount,
+      'likedBy': likedBy,
+      'dateTime': dateTime,
+      'profileImageUrl': profileImageUrl,
+      'firstName': firstName,
+      'status': status,
+      'sharesCount': shareCount,
+    });
+  }
+
+  Future<String?> _showImagePickerDialog() async {
+    if (imageFile != null) {
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          title = '';
+
+          return AlertDialog(
+            title: const Text('Assign a Title'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.memory(imageFile),
+                TextField(
+                  onChanged: (value) {
+                    title = value;
+                  },
+                  decoration: const InputDecoration(labelText: 'Title'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context, title);
+                },
+                child: const Text('Save'),
+              ),
+            ],
           );
         },
-      ),
-    );
+      );
+      return title;
+    } else {
+      return '';
+    }
+  }
+
+  Future<String> uploadImageToStorage(String childName, Uint8List file) async {
+    Reference ref = _storage.ref().child(childName);
+    UploadTask uploadTask = ref.putData(file);
+    TaskSnapshot snapshot = await uploadTask;
+    String downloadUrl = await snapshot.ref.getDownloadURL();
+    return downloadUrl;
+  }
+
+  Future<Uint8List> pickImageFromGallery() async {
+    Uint8List img = await pickImage(ImageSource.gallery);
+    _image = img;
+    return _image;
   }
 
   Widget buildImageCard(ImageDocument document, {required String documentsId, required String? postProfileImageUrl, required String? postFirstName}) {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
-    late bool alreadyLiked = (document.likedBy.contains(currentUserId));
+
     bool currentUserIsViewingUser = false;
     if (document.userId == currentUserId) {
       currentUserIsViewingUser = true;
@@ -131,188 +327,94 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     fetchUserDetails(userId: document.userId);
     return Visibility(
       visible: isVisible(document.userId),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ShowUserDetailsPage(
-                        userId: document.userId,
-                      ),
-                    ),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Container(
-                      width: 25, // Increased width
-                      height: 25, // Increased height
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.blue,
-                          width: 0.1,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShowUserDetailsPage(
+                          userId: document.userId,
                         ),
                       ),
-                      child: ClipOval(
-                        child: Image.network(
-                          postProfileImageUrl!,
-                          width: 25, // Increased width
-                          height: 25, // Increased height
-                          fit: BoxFit.cover,
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 25, // Increased width
+                        height: 25, // Increased height
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.blue,
+                            width: 0.1,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            postProfileImageUrl!,
+                            width: 25, // Increased width
+                            height: 25, // Increased height
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      postFirstName!,
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Text(
-                      document.dateTime,
-                      style: const TextStyle(fontSize: 13.0),
-                    ),
-                    Visibility(
-                      visible: currentUserIsViewingUser,
-                      child: IconButton(
-                          onPressed: () {
-                            deletePost(documentsId);
-                          },
-                          icon: const Icon(Icons.delete)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          GestureDetector(
-            onTap: () {
-              double screenWidth = MediaQuery.of(context).size.width;
-              double screenHeight = MediaQuery.of(context).size.height;
-              double dialogWidth = screenWidth * 0.5; // Adjust the percentage as needed
-              double dialogHeight = screenHeight * 0.5; // Adjust the percentage as needed
-              // Show a dialog or a full-screen view to display the image in a larger format
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return Dialog(
-                    child: Column(children: [
-                      IconButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          icon: const Icon(Icons.close)),
                       const SizedBox(
-                        height: 50,
+                        width: 5,
                       ),
                       Text(
-                        'Title: ${document.title}',
-                        style: const TextStyle(fontSize: 40, color: Colors.blue),
+                        postFirstName!,
+                        style: const TextStyle(fontSize: 20),
                       ),
-                      const SizedBox(
-                        height: 20,
+                      const SizedBox(width: 8.0),
+                      Text(
+                        document.dateTime,
+                        style: const TextStyle(fontSize: 13.0),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(16.0),
-                        width: dialogWidth,
-                        height: dialogHeight,
-                        child: Image.network(
-                          document.imageUrl,
-                          width: 1600,
-                          height: 1600,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setState) {
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.thumb_up, color: alreadyLiked ? Colors.blue : Colors.black),
-                                    onPressed: () async {
-                                      User? user = FirebaseAuth.instance.currentUser;
-                                      String? userId = user?.uid;
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10,),
+            GestureDetector(
+              onTap: () async {
+                QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+                    .collection('images')
+                    .where('userId', isEqualTo: document.userId)
+                    .where('status', isEqualTo: true)
+                    .orderBy('dateTime',descending: true)
+                    .get();
 
-                                      DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(documentsId).get();
-
-                                      if (imageSnapshot.exists) {
-                                        ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-                                        String documentId = imageSnapshot.id;
-
-                                        bool userLiked = retrievedDoc.likedBy.contains(userId);
-                                        if (userLiked) {
-                                          decrementLike(retrievedDoc, userId, documentId);
-                                        } else {
-                                          incrementLike(retrievedDoc, userId, documentId);
-                                        }
-                                        setState(() {
-                                          alreadyLiked = !alreadyLiked;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                  Visibility(
-                                    visible: isCountVisible(document.userId),
-                                    child: Text('Likes: ${document.likes}'),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.comment),
-                                    onPressed: () {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return CommentInputSheet(
-                                            documentsId: documentsId,
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
-                                  Visibility(
-                                    visible: isCountVisible(document.userId),
-                                    child: Text('Comments: ${document.commentsCount}'),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.share),
-                                    onPressed: () {},
-                                  ),
-                                  Text('Shares: ${document.sharesCount}'),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ]),
+                if (querySnapshot.docs.isNotEmpty) {
+                  showDialog(
+                    context: _scaffoldKey.currentContext!,
+                    builder: (BuildContext context) {
+                      return ImagePageViewDialog(
+                        querySnapshot: querySnapshot,
+                        initialIndex: 0,
+                      );
+                    },
                   );
-                },
-              );
-            },
-            child: ClipOval(
-              child: Image.network(
-                document.imageUrl,
-                width: 120,
-                height: 120,
-                fit: BoxFit.cover,
+                }
+              },
+              child: ClipOval(
+                child: Image.network(
+                  document.imageUrl,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -342,65 +444,8 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     return true;
   }
 
-  isCountVisible(String userId) {
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
-    if (currentUserId == userId) {
-      return true;
-    }
-    return false;
-  }
-
-  Future<void> deletePost(String documentId) async {
-    try {
-      // Access the collection and delete the document with the given ID
-      await FirebaseFirestore.instance.collection('images').doc(documentId).delete();
-      setState(() {});
-    } catch (e) {
-      print('Error deleting document: $e');
-    }
-  }
-
-  void incrementLike(ImageDocument document, String? userId, documentId) async {
-    // Increment likes and add userId to the listedBy field
-    DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-    document.likes++;
-    document.likedBy.add(userId!);
-
-    // Update the document in Firestore
-    FirebaseFirestore.instance.collection('images').doc(documentId).update({
-      'likes': document.likes,
-      'likedBy': document.likedBy,
-    });
-    String groupId = combineIds(userId, document.userId);
-
-    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-    String message = "liked the status";
-    await interactionsCollection.add({
-      'interactedBy': userId,
-      'interactedWith': document.userId,
-      'imageUrl': document.imageUrl,
-      'dateTime': formattedDateTime,
-      'message': message,
-      'groupId': groupId,
-    });
-  }
-
-  void decrementLike(ImageDocument document, String? userId, documentId) {
-    // Decrement likes and remove userId from the listedBy field
-    document.likes--;
-    document.likedBy.remove(userId);
-
-    FirebaseFirestore.instance.collection('images').doc(documentId).update({
-      'likes': document.likes,
-      'likedBy': document.likedBy,
-    });
-  }
-
   fetchUserDetails({required String userId}) async {
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
-    // Query the collection to find documents that match the provided mobile number
     DocumentSnapshot documentSnapshot = await usersCollection.doc(userId).get();
     if (documentSnapshot.exists) {
       Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
@@ -412,7 +457,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       }
     } else {
       String message = "user details not found";
-      showAlert(context, message);
+      showAlert(_scaffoldKey.currentContext!, message);
     }
   }
 
@@ -423,6 +468,27 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       return '${difference.inHours} hours ago';
     } else {
       return '${difference.inDays} days ago';
+    }
+  }
+
+  Future<void> performQuery() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('images').where('status', isEqualTo: true).orderBy('dateTime').get();
+
+    for (var document in querySnapshot.docs) {
+      snapshotMap[document['userId']] = document;
+    }
+    setState(() {
+      snapshotMap;
+    });
+  }
+
+  Future<void> deletePost(String documentId) async {
+    try {
+      await FirebaseFirestore.instance.collection('images').doc(documentId).delete();
+      setState(() {
+      });
+    } catch (e) {
+      print('Error deleting document: $e');
     }
   }
 }

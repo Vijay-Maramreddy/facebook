@@ -48,7 +48,5 @@ class ImageDocument {
 
 
 
-  // void incrementLikes() {
-  //   likes++;
-  // }
+
 }

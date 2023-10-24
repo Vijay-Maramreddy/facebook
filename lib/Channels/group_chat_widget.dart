@@ -12,12 +12,14 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
 
 import '../Chat/all_interactions.dart';
 import '../app_style.dart';
 import '../base_page.dart';
+late DocumentSnapshot? callBackSnapshot=null;
 
 class GroupChatWidget extends StatefulWidget {
   final String? clickedGroupId;
@@ -29,19 +31,24 @@ class GroupChatWidget extends StatefulWidget {
 }
 
 class _GroupChatWidgetState extends State<GroupChatWidget> {
-  late String groupName='';
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late String groupName = '';
   late String groupDescription = '';
   late List<String> groupMembers = [];
   late String groupProfileImageUrl = '';
-  String text="";
-  String media="";
+  String text = "";
+  String media = "";
 
   final TextEditingController _messageController = TextEditingController();
   Uint8List? image;
   XFile? video;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  bool isGroup=true;
-  Map<String,DateTime> seenBy={};
+  bool isGroup = true;
+  Map<String, DateTime> seenBy = {};
+  bool isreply = false;
+  late bool isReply=false;
+  late String callBackDocumentId="";
+  final AudioPlayer audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -50,7 +57,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       groupProfileImageUrl = widget.selectedGroupDocument[1];
       getGroupData(widget.clickedGroupId!);
       makeMessageCountZero();
-
     });
     super.initState();
   }
@@ -76,7 +82,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                   );
                 },
                 child: Container(
-                  width: 900,
+                  width: 600,
                   margin: const EdgeInsets.all(10.0),
                   padding: const EdgeInsets.all(10.0),
                   decoration: BoxDecoration(
@@ -111,30 +117,102 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                       ),
                       Text(
                         widget.selectedGroupDocument[0],
-                        style: const TextStyle(fontSize: 20,),
+                        style: const TextStyle(
+                          fontSize: 20,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-
+              const SizedBox(width: 10),
+              ElevatedButton(
+                  onPressed: () {
+                    (media == "images") ? (media = "") : (media = "images");
+                    setState(() {
+                      media;
+                    });
+                  },
+                  child: const Text("Show Images")),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                  onPressed: () {
+                    (media == "videos") ? (media = "") : (media = "videos");
+                    setState(() {
+                      media;
+                    });
+                  },
+                  child: const Text("Show Videos")),
             ],
           ),
           Column(
             children: [
               SizedBox(
-                height: 500,
+                height: 430,
                 child: Center(
-                  child: AllInteractions(interactedBy: currentUserId, interactedWith: widget.clickedGroupId, groupId: widget.clickedGroupId,oppositeBlocked:const [],youBlocked:false,string: text,media:media),
+                  child: AllInteractions(
+                      interactedBy: currentUserId,
+                      interactedWith: widget.clickedGroupId,
+                      groupId: widget.clickedGroupId,
+                      oppositeBlocked: const [],
+                      youBlocked: false,
+                      string: text,
+                      media: media, updateState:updateState,),
                 ),
               ),
+              if(callBackSnapshot!=null)
+                Container(
+                  height: 80,
+                  margin: const EdgeInsets.all(2.0),
+                  padding: const EdgeInsets.all(2.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white60,
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.circular(2.0),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Row(
+                      children: [
+                        if (callBackSnapshot?['audioUrl'] != "")
+                          AudioMessageWidget(audioUrl: callBackSnapshot?['audioUrl'], audioPlayer: audioPlayer)
+                        else if (callBackSnapshot?['videoUrl'] != "" && callBackSnapshot?['videoUrl'] != null)
+                          SizedBox(
+                            child:Text(callBackSnapshot?['message']),
+                            // child: buildVideoUrl(callBackSnapshot?['videoUrl'], callBackSnapshot as Map<String, dynamic>),
+                          )
+                        else if (callBackSnapshot?['imageUrl'] == "" && callBackSnapshot?['videoUrl'] == "")
+                          if (callBackSnapshot?['message']!.startsWith('https://'))
+                            SizedBox(
+                              child: buildMessageUrl(callBackSnapshot?['message']),
+                            )
+                          else
+                            SizedBox(
+                              child: buildMessage(callBackSnapshot?['message']),
+                            )
+                        else
+                          SizedBox(
+                            child: buildImage(callBackSnapshot?['imageUrl'], callBackSnapshot?['message']),
+                          ),
+                        IconButton(
+                          onPressed:(){
+                            setState(() {
+                              callBackSnapshot=null;
+                              callBackDocumentId="";
+                            });
+                          },
+                          icon: const Icon(Icons.cancel),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
               Row(children: [
                 Container(
                   decoration: customBoxDecoration,
                   margin: const EdgeInsets.all(10),
                   alignment: Alignment.center,
                   padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                  width: 850,
+                  width: 700,
                   height: 45,
                   child: Row(
                     children: [
@@ -145,27 +223,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                             hintText: 'Enter a message',
                             border: InputBorder.none,
                           ),
+                          onSubmitted: (text){sendMessageOrIcon();},
                         ),
                       ),
-                      IconButton(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
-                        icon: const Icon(Icons.emoji_emotions), // Emoji icon
-                        onPressed: () {
-                          openEmojiPicker(context); // Open the emoji picker modal bottom sheet
-                        },
-                      ),
-                      IconButton(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 6),
-                        onPressed: uploadImageAndSaveUrl,
-                        icon: const Icon(Icons.add_a_photo),
-                      ),
-                      IconButton(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
-                        onPressed: () async {
-                          await uploadVideoAndSaveUrl();
-                        },
-                        icon: const Icon(Icons.video_library),
-                      )
+
                     ],
                   ),
                 ),
@@ -174,6 +235,26 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                       sendMessageOrIcon();
                     },
                     icon: const Icon(Icons.send)),
+                IconButton(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
+                  icon: const Icon(Icons.emoji_emotions), // Emoji icon
+                  onPressed: () {
+                    openEmojiPicker(context); // Open the emoji picker modal bottom sheet
+                  },
+                ),
+                IconButton(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 6),
+                  onPressed: uploadImageAndSaveUrl,
+                  icon: const Icon(Icons.add_a_photo),
+                ),
+                IconButton(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 5),
+                  onPressed: () async {
+                    await uploadVideoAndSaveUrl();
+                  },
+                  icon: const Icon(Icons.video_library),
+                ),
+
                 IconButton(
                   onPressed: () async {
                     await sendMessageWithLocation();
@@ -195,8 +276,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   }
 
   Future<void> getGroupData(String clickedGroupId) async {
-    DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-    await FirebaseFirestore.instance.collection('Groups').doc(clickedGroupId).get();
+    DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(clickedGroupId).get();
 
     if (documentSnapshot.exists) {
       setState(() {
@@ -205,9 +285,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         groupProfileImageUrl = documentSnapshot.data()!['groupProfileImageUrl'];
         Map<String, dynamic> groupMembersMap = documentSnapshot.data()!['groupMembers'];
         groupMembers = groupMembersMap.keys.toList();
-
-        // groupMembers =documentSnapshot.data()!['groupMembers'].keys.toList();
-
       });
     } else {
       print("Group not found for id: $clickedGroupId");
@@ -270,15 +347,14 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     String? currentUserId = user?.uid;
 
     DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     String? imageUrl = '';
     String text = _messageController.text;
     if (text.isNotEmpty) {
       await interactionsCollection.add({
-        'seenStatus':false,
-        'baseText':"",
+        'seenStatus': false,
+        'baseText': "",
         'interactedBy': currentUserId,
         'interactedWith': widget.clickedGroupId,
         'imageUrl': imageUrl,
@@ -286,16 +362,20 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         'message': text,
         'groupId': widget.clickedGroupId,
         'videoUrl': '',
-        'audioUrl':'',
-        'isVanish':false,
-        'visibility':true,
-        'seenBy':seenBy,
+        'audioUrl': '',
+        'isVanish': false,
+        'visibility': true,
+        'seenBy': seenBy,
+        'replyTo': callBackDocumentId,
       });
       _messageController.clear();
 
       increaseMessageCount();
 
-    setState(() {}); // Clear the text field after sending the message
+      setState(() {
+        callBackDocumentId="";
+        callBackSnapshot=null;
+      }); // Clear the text field after sending the message
     }
   }
 
@@ -347,6 +427,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       return '';
     }
   }
+
   Future<String> uploadImageToStorage(String childName, Uint8List file) async {
     Reference ref = _storage.ref().child(childName);
     UploadTask uploadTask = ref.putData(file);
@@ -359,6 +440,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     XFile? videoFile = await ImagePicker().pickVideo(source: ImageSource.gallery);
     return videoFile;
   }
+
   void uploadImageAndSaveUrl() async {
     image = await pickImageFromGallery();
 
@@ -366,14 +448,13 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       String? message = await _showImagePickerDialog();
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
-      String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? imageUrl = await uploadImageToStorage('groupImages/$uuid', image!);
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
       String? currentUserId = user?.uid;
       await interactionsCollection.add({
-        'seenStatus':false,
-        'baseText':"",
+        'seenStatus': false,
+        'baseText': "",
         'interactedBy': currentUserId,
         'interactedWith': widget.clickedGroupId,
         'imageUrl': imageUrl,
@@ -381,10 +462,15 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         'message': message,
         'groupId': widget.clickedGroupId,
         'videoUrl': '',
-        'audioUrl':'',
-        'isVanish':false,
-        'visibility':true,
-        'seenBy':seenBy,
+        'audioUrl': '',
+        'isVanish': false,
+        'visibility': true,
+        'seenBy': seenBy,
+        'replyTo': callBackDocumentId,
+      });
+      setState(() {
+        callBackDocumentId="";
+        callBackSnapshot=null;
       });
     } else {
       print('No image picked.');
@@ -406,7 +492,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         looping: true,
       );
       await showDialog(
-        context: context,
+        context: _scaffoldKey.currentContext!,
         builder: (context) {
           return AlertDialog(
             title: const Text('Send a Video'),
@@ -455,38 +541,40 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     }
   }
 
-
   Future<void> uploadVideoAndSaveUrl() async {
     video = await pickVideoFromGallery();
 
     if (video != null) {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
-      String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
       String? videoUrl = await uploadVideoToStorage('groupVideos/$uuid', video!);
       String? message = await _showVideoPickerDialog(videoUrl);
 
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
       User? user = FirebaseAuth.instance.currentUser;
       String? currentUserId = user?.uid;
-      // String groupId = combineIds(currentUserId, widget.documentId);
       if (videoUrl != null) {
         await interactionsCollection.add({
-          'seenStatus':false,
-          'baseText':"",
+          'seenStatus': false,
+          'baseText': "",
           'interactedBy': currentUserId,
           'interactedWith': widget.clickedGroupId,
           'videoUrl': videoUrl,
-          'audioUrl':'',
+          'audioUrl': '',
           'imageUrl': '',
           'dateTime': now,
           'message': message,
           'groupId': widget.clickedGroupId,
-          'isVanish':false,
-          'visibility':true,
-          'seenBy':seenBy,
+          'isVanish': false,
+          'visibility': true,
+          'seenBy': seenBy,
+          'replyTo': callBackDocumentId,
         });
       }
+      setState(() {
+        callBackDocumentId="";
+        callBackSnapshot=null;
+      });
     } else {
       print('No video picked.');
     }
@@ -516,17 +604,20 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     } else {
       print('Unable to retrieve location.');
     }
+    setState(() {
+      callBackSnapshot=null;
+    });
   }
+
   Future<void> sendMessage(String message) async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     await interactionsCollection.add({
-      'seenStatus':false,
-      'baseText':"",
+      'seenStatus': false,
+      'baseText': "",
       'interactedBy': currentUserId,
       'interactedWith': widget.clickedGroupId,
       'imageUrl': '',
@@ -534,15 +625,21 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       'message': message,
       'groupId': widget.clickedGroupId,
       'videoUrl': '',
-      'audioUrl':'',
-      'isVanish':false,
-      'visibility':true,
-      'seenBy':seenBy,
+      'audioUrl': '',
+      'isVanish': false,
+      'visibility': true,
+      'seenBy': seenBy,
+      'replyTo': callBackDocumentId,
     });
     increaseMessageCount();
     // Clear the text field after sending the message
     _messageController.clear();
+    setState(() {
+      callBackDocumentId="";
+      callBackSnapshot=null;
+    });
   }
+
   Future<String?> _getUserLocation() async {
     try {
       final Geoposition geoposition = await window.navigator.geolocation.getCurrentPosition();
@@ -557,8 +654,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   }
 
   Future<void> makeMessageCountZero() async {
-    User? user=FirebaseAuth.instance.currentUser;
-    String? currentUserId=user?.uid;
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
     try {
       CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
       DocumentSnapshot groupDoc = await groupsCollection.doc(widget.clickedGroupId).get();
@@ -583,8 +680,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   }
 
   Future<void> increaseMessageCount() async {
-    User? user=FirebaseAuth.instance.currentUser;
-    String? currentUserId=user?.uid;
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
     try {
       CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
       DocumentSnapshot groupDoc = await groupsCollection.doc(widget.clickedGroupId).get();
@@ -619,13 +716,13 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     if (result != null && result.files.isNotEmpty) {
       final PlatformFile audioFile = result.files.first;
       String audioUrl = await _uploadAudioToStorage(audioFile);
-      addaudiotoFirestore(audioUrl);
+      addAudioToFireStore(audioUrl);
     }
   }
 
   Future<String> _uploadAudioToStorage(PlatformFile audioFile) async {
     try {
-      Reference audioRef = FirebaseStorage.instance.ref().child('audio').child(audioFile.name ?? 'audio_file.mp3');
+      Reference audioRef = FirebaseStorage.instance.ref().child('audio').child(audioFile.name);
       UploadTask uploadTask = audioRef.putData(audioFile.bytes!);
 
       await uploadTask.whenComplete(() => null);
@@ -639,12 +736,12 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     }
   }
 
-  Future<void> addaudiotoFirestore(String audioUrl) async {
+  Future<void> addAudioToFireStore(String audioUrl) async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-    DateTime now=DateTime.now();
+    DateTime now = DateTime.now();
     await interactionsCollection.add({
       'seenStatus': false,
       'baseText': "",
@@ -654,45 +751,39 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       'imageUrl': '',
       'dateTime': now,
       'message': "",
-      'audioUrl':audioUrl,
-      'isVanish':false,
+      'audioUrl': audioUrl,
+      'isVanish': false,
       'groupId': widget.clickedGroupId,
       'visibility': true,
-      'seenBy':seenBy,
+      'seenBy': seenBy,
+      'replyTo': callBackDocumentId,
+    });
+    setState(() {
+      callBackSnapshot=null;
+      callBackDocumentId="";
     });
     increaseMessageCount();
   }
 
+  void updateState(String documentId) {
+    callBackDocumentId=documentId;
+    fetchCallBackDocument();
+    setState(() {
+      callBackDocumentId;
+      isReply=true;
+    });
+  }
 
+  Future<void> fetchCallBackDocument() async {
+    DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('interactions').doc(callBackDocumentId).get();
+    callBackSnapshot=snapshot;
+    setState(() {
+      callBackSnapshot;
+      print("the call back snapshot id is ${callBackSnapshot?.id}");
+    });
+  }
 }
 
-
-
-
-
-
-
-
-// const SizedBox(width: 10),
-// ElevatedButton(
-//     onPressed:(){
-//       (media=="images")?(media=""):(media="images");
-//       setState(() {
-//         media;
-//       });
-//     },
-//     child: Text("Show Images")
-// ),
-// const SizedBox(width: 10),
-// ElevatedButton(
-//     onPressed:(){
-//       (media=="videos")?(media=""):(media="videos");
-//       setState(() {
-//         media;
-//       });
-//     },
-//     child: Text("Show Videos")
-// ),
 // const SizedBox(width: 10),
 // Expanded(
 //   child: TextField(

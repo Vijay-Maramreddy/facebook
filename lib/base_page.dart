@@ -1,4 +1,7 @@
+import 'dart:html';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:facebook/reels/video_container.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -185,7 +188,7 @@ class AudioMessageWidget extends StatefulWidget {
   final String audioUrl;
   final AudioPlayer audioPlayer; // Pass the AudioPlayer instance from the parent
 
-  AudioMessageWidget({required this.audioUrl, required this.audioPlayer});
+  const AudioMessageWidget({super.key, required this.audioUrl, required this.audioPlayer});
 
   @override
   State<AudioMessageWidget> createState() => _AudioMessageWidgetState();
@@ -249,9 +252,11 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> {
     return StatefulBuilder(
       builder: (context, setState) {
         return Container(
+
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(5),
-              border: Border.all(width:2)
+              border: Border.all(width:2),
+            color: Colors.white60,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -284,4 +289,80 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> {
       },
     );
   }
+}
+
+Widget buildVideoUrl(String urlString, Map<String, dynamic> data) {
+  return Column(
+    children: [
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Text(data['message'], style: const TextStyle(fontSize: 24, color: Colors.black87, fontWeight: FontWeight.w400)),
+      ),
+      Container(
+        width: 450,
+        height: 270,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: VideoContainer(
+          videoUrl: urlString,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget buildMessageUrl(String message) {
+  return Visibility(
+    visible: message.startsWith('https://'),
+    child: Column(
+      children: [
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () {
+              window.open(message, '_blank');
+            },
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget buildMessage(String message) {
+  return Column(
+    children: [
+      Container(
+        color: Colors.white60,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: Text(message, style: const TextStyle(fontSize: 20, color: Colors.black87, fontWeight: FontWeight.w400)),
+      ),
+    ],
+  );
+}
+
+Widget buildImage(String imageUrl, String message) {
+  return Column(
+    children: [
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: Text(message, style: const TextStyle(fontSize: 24, color: Colors.black87, fontWeight: FontWeight.w400)),
+      ),
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Image.network(
+          imageUrl,
+          width: 100,
+          height: 100,
+          fit: BoxFit.cover,
+        ),
+      ),
+    ],
+  );
 }

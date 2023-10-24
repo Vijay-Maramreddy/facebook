@@ -21,6 +21,7 @@ class _ChatPageState extends State<ChatPage> {
   late Future<QuerySnapshot<Map<String, dynamic>>> allUsersSnapshot;
   int count = 0;
   int counter = 0;
+  int? value=0;
 
   Map<String, List<dynamic>> resultMap = {};
   bool isVanish = false;
@@ -129,36 +130,39 @@ class _ChatPageState extends State<ChatPage> {
                                         String? key = allUsersQuerySnapshot.docs[index].id;
                                         User? user = FirebaseAuth.instance.currentUser;
                                         String? currentUserId = user?.uid;
+                                        String? interactedTo = allUsersQuerySnapshot.docs[index].id;
+                                        List? list1 = resultMap[interactedTo];
+                                        value = list1?[0]??0;
                                         if (key == currentUserId) {
                                           return Container();
                                         }
-                                        List? list1 = resultMap[key];
-                                        int? value = list1?[0]??0;
-
                                         return Padding(
                                           padding: const EdgeInsets.all(10),
                                           child: ElevatedButton(
                                             onPressed: () {
                                               String? interactedBy = currentUserId;
                                               String? interactedTo = allUsersQuerySnapshot.docs[index].id;
+                                              List? list1 = resultMap[interactedTo];
+                                              value = list1?[0]??0;
                                               updateOrAddInteraction(interactedBy!, interactedTo);
                                               groupId = createGroupId(allUsersQuerySnapshot.docs[index].id);
                                               selectedUserDetailsDocumentData = allUsersQuerySnapshot.docs[index].data();
                                               selectedUserDetailsDocumentId = allUsersQuerySnapshot.docs[index].id;
                                               deletedMessageCount(interactedBy, interactedTo);
                                               isVanish = list1![1];
+                                              print("isVanish is $isVanish");
                                               resultMap[selectedUserDetailsDocumentId!] = [0, list1?[1]];
                                               isGroup = false;
                                               setState(() {
                                                 interactedTo;
                                                 interactedBy;
+                                                value;
                                                 groupId;
                                                 selectedUserDetailsDocumentData;
                                                 selectedUserDetailsDocumentId;
                                                 isVanish;
                                                 resultMap[selectedUserDetailsDocumentId!];
                                                 isGroup;
-                                                print(groupId);
                                               });
                                             },
                                             child: Container(
@@ -332,9 +336,9 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             if (groupId == "" && clickedGroupId=="")
-              Padding(
+              const Padding(
                 padding: EdgeInsets.fromLTRB(600, 0, 600, 0),
-                child: const Text("please select"),
+                child: Text("please select"),
               )
             else if (isGroup == false)
               Visibility(
@@ -366,7 +370,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                 ),
-              )
+              ),
           ],
         ),
       ),
@@ -427,18 +431,19 @@ class _ChatPageState extends State<ChatPage> {
     try {
       CollectionReference<Map<String, dynamic>> collectionRef = FirebaseFirestore.instance.collection('messageCount');
       QuerySnapshot<Map<String, dynamic>> querySnapshot = await collectionRef.get();
+      User? user = FirebaseAuth.instance.currentUser;
+      String? currentUserId = user?.uid;
       for (QueryDocumentSnapshot<Map<String, dynamic>> document in querySnapshot.docs) {
-        User? user = FirebaseAuth.instance.currentUser;
-        String? currentUserId = user?.uid;
         if (document.data()['interactedTo'] == currentUserId) {
           String uid = document.data()['interactedBy']; // Document UID
-          int fieldValue = document.data()['count'];
-          bool tempIsVanish = document.data()['isVanish'] ?? false;
-          resultMap[uid] = [fieldValue, tempIsVanish];
+          int count = document.data()['count'];
+          bool tempIsVanish = document.data()['isVanish']??false;
+          resultMap[uid] = [count, tempIsVanish];
         }
       }
       setState(() {
         resultMap;
+        print(resultMap);
       });
     } catch (e) {
       print('Error retrieving field values: $e');

@@ -240,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             child: TextButton(
                                                 onPressed: uploadImageAndSaveUrl,
                                                 child: const Text(
-                                                  "upload post",
+                                                  "Upload Post",
                                                   style: TextStyle(color: Colors.white, fontSize: 36),
                                                 ))),
                                       ),
@@ -433,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen> {
       String uuid = AppStyles.uuid();
       DateTime now = DateTime.now();
       String dateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-      String? imageUrl = await uploadImageToStorage('postImages/' + uuid, imageFile);
+      String? imageUrl = await uploadImageToStorage('postImages/$uuid', imageFile);
       int shareCount = 0;
       if (imageUrl != null) {
         CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');

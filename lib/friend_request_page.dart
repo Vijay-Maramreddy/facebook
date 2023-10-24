@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'base_page.dart';
@@ -39,13 +38,13 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return CircularProgressIndicator();
+              return const CircularProgressIndicator();
             }
             if (snapshot.hasError) {
               return Text('Error: ${snapshot.error}');
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Text('No data available');
+              return const Text('No data available');
             }
             return Container(
               padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
@@ -72,7 +71,7 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                       }
 
                       if (!snapshot.hasData || !snapshot.data!.exists) {
-                        return Text('User data not available');
+                        return const Text('User data not available');
                       }
 
                       DocumentSnapshot requesterInfo = snapshot.data!;
@@ -125,8 +124,8 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                                 ],
                               ),
                             ),
-                            ElevatedButton(onPressed: (){acceptRequest(requesterInfo.id);}, child: Text("Accept")),
-                            ElevatedButton(onPressed: () {rejectRequest(requesterInfo.id);}, child: Text("Reject")),
+                            ElevatedButton(onPressed: (){acceptRequest(requesterInfo.id);}, child: const Text("Accept")),
+                            ElevatedButton(onPressed: () {rejectRequest(requesterInfo.id);}, child: const Text("Reject")),
                           ],
                         ),
                       );

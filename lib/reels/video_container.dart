@@ -83,7 +83,7 @@ class _VideoContainerState extends State<VideoContainer> {
         children: [
           SizedBox(
             width: 550,
-            height: 300,
+            height: 240,
             child: Stack(
               alignment: alignment,
               children: [

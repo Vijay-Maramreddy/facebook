@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'dart:collection';
 import 'package:facebook/Posts/comment_input_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +12,7 @@ import 'image_document_model.dart';
 
 class ImageCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
-  ImageCollectionWidget({required this.showOnlyCurrentUserPosts});
+  ImageCollectionWidget({super.key, required this.showOnlyCurrentUserPosts});
 
   @override
   _ImageCollectionWidgetState createState() => _ImageCollectionWidgetState();
@@ -22,7 +22,9 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   late String profileImageUrl = '';
   late String firstName = '';
   List<String> userIdList = [];
+  List<String> groupIdList = [];
   Map<String, List<String>> userDataMap = {};
+  Map<String, List<String>> groupDataMap = {};
 
   @override
   void initState() {
@@ -59,7 +61,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Text('No data available');
           }
-          return Container(
+          return SizedBox(
             width: 800,
             height: 380,
             child: ListView.builder(
@@ -73,7 +75,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                   future: getProfileDetails(postUserId),
                   builder: (context, profileDetailsSnapshot) {
                     if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator();
+                      return const CircularProgressIndicator();
                     } else if (profileDetailsSnapshot.hasError) {
                       return Text('Error: ${profileDetailsSnapshot.error}');
                     } else {
@@ -123,7 +125,7 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     if (document.userId == currentUserId) {
       currentUserIsViewingUser = true;
     }
-    int sharesCount=document.sharesCount as int;
+    int sharesCount=document.sharesCount;
     print(sharesCount);
     return Visibility(
       visible: isVisible(document.userId),
@@ -269,50 +271,56 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
                         showModalBottomSheet(
                           context: context,
                           builder: (context) {
-                            return Container(
-                              child: Wrap(
-                                children: <Widget>[
-                                  ListTile(
-                                    leading: const Icon(Icons.send),
-                                    title: const Text('Share on WhatsApp'),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      shareOnWhatsApp(linkToShare);
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.send),
-                                    title: const Text('Share on Facebook'),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      shareOnFacebook(linkToShare);
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.send),
-                                    title: const Text('Share on Telegram'),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      shareOnTelegram(linkToShare);
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.send),
-                                    title: const Text('Share with friends'),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      _showDialog(context, document.imageUrl);
-                                      // shareToFriends(linkToShare);
-                                    },
-                                  ),
-                                ],
-                              ),
+                            return Wrap(
+                              children: <Widget>[
+                                ListTile(
+                                  leading: const Icon(Icons.send),
+                                  title: const Text('Share on WhatsApp'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    shareOnWhatsApp(linkToShare);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.send),
+                                  title: const Text('Share on Facebook'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    shareOnFacebook(linkToShare);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.send),
+                                  title: const Text('Share on Telegram'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    shareOnTelegram(linkToShare);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.send),
+                                  title: const Text('Share with friends'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _showDialog(context, document.imageUrl, true);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.send),
+                                  title: const Text('Share with Groups'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+
+                                    _showDialog(context, document.imageUrl, false);
+                                  },
+                                ),
+                              ],
                             );
                           },
                         );
                       },
                     ),
-                    Text('$sharesCount',style: TextStyle(color: Colors.black)),
+                    Text('$sharesCount',style: const TextStyle(color: Colors.black)),
                   ],
                 ),
               ],
@@ -397,58 +405,123 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
   }
 
 
-  Future<void> _showDialog(BuildContext context, String linkToShare) {
-    late List<String> userIds = [];
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Select Users'),
-          content: SingleChildScrollView(
-              child: Column(
-                children: userDataMap.keys.map((userId) {
-                  String firstName = userDataMap[userId]![0];
-                  bool isChecked = userIds.contains(userId);
+  Future<void> _showDialog(BuildContext context, String linkToShare, bool isFriends) async {
+    final currentContext = context;
+    List<String> userIds = [];
+    List<String> groupIds = [];
+    if (isFriends) {
+      showDialog(
+        context: currentContext,
+        builder: (BuildContext context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: const Text('Select Users'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    children: userDataMap.keys.map((userId) {
+                      String firstName = userDataMap[userId]![0];
+                      bool isChecked = userIds.contains(userId);
 
-                  return ListTile(
-                    title: Text(firstName),
-                    leading: Checkbox(
-                      value: isChecked,
-                      onChanged: (bool? newvalue) {
-                        print(userIds);
-                        print(userId);
-                        print('Checkbox value: $newvalue');
-                        setState(() {
-                          if (newvalue != null) {
-                            if (newvalue) {
-                              userIds.add(userId);
-                            } else {
-                              userIds.remove(userId);
-                            }
-                          }
-                        });
-                      },
-                    ),
-                  );
-                }).toList(),
-              )),
-          actions: <Widget>[
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                shareLinkToAllFriends(userIds, linkToShare);
-                Navigator.of(context).pop(userIds);
-              },
-            ),
-          ],
-        );
-      },
-    );
+                      return ListTile(
+                        title: Text(firstName),
+                        leading: Checkbox(
+                          value: isChecked,
+                          onChanged: (bool? newvalue) {
+                            print(userIds);
+                            print(userId);
+                            print('Checkbox value: $newvalue');
+                            setState(() {
+                              if (newvalue != null) {
+                                if (newvalue) {
+                                  userIds.add(userId);
+                                } else {
+                                  userIds.remove(userId);
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('OK'),
+                    onPressed: () {
+                      shareLinkToAllFriends(userIds, linkToShare);
+                      Navigator.of(context).pop(userIds);
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: currentContext,
+        builder: (BuildContext context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: const Text('select Groups'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    children: groupDataMap.keys.map((groupId) {
+                      String groupName = groupDataMap[groupId]![0];
+                      bool isChecked = groupIds.contains(groupId);
+
+                      return ListTile(
+                        title: Text(groupName),
+                        leading: Checkbox(
+                          value: isChecked,
+                          onChanged: (bool? newvalue) {
+                            print(groupIds);
+                            print(groupId);
+                            print('Checkbox value: $newvalue');
+                            setState(() {
+                              if (newvalue != null) {
+                                if (newvalue) {
+                                  groupIds.add(groupId);
+                                } else {
+                                  groupIds.remove(groupId);
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('OK'),
+                    onPressed: () {
+                      shareLinkToAllGroups(groupIds, linkToShare);
+                      Navigator.of(context).pop(groupIds);
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    }
   }
 
   void shareLinkToAllFriends(List<String> userIds, String linkToShare) {
     for (String userId in userIds) {
       sendPostImageUrl(userId, linkToShare);
+    }
+  }
+  void shareLinkToAllGroups(List<String> groupIds, String linkToShare) {
+    for (String groupId in groupIds) {
+      sendIamgeUrlToGroups(groupId, linkToShare);
     }
   }
 
@@ -467,11 +540,6 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
     count = doc['count'];
     count = count + 1;
     await doc.reference.update({'count': count});
-    // await doc.reference.update({'count': currentCount + 1});
-
-    DateTime now = DateTime.now();
-    String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     String? videoLink = '';
     String text ="Check Out This Post";
@@ -481,18 +549,69 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
         'interactedBy': currentUserId,
         'interactedWith': userId,
         'imageUrl': imageLink,
-        'dateTime': formattedDateTime,
+        'dateTime': DateTime.now(),
         'message': text,
         'groupId': groupId,
         'videoUrl': "",
         'visibility': true,
+        'audioUrl':"",
+        'baseText':"",
+        'isVanish':false,
+        'seenBy':{},
+        'seenStatus':false,
+      });
+    }
+  }
+  void sendIamgeUrlToGroups(String groupId, String imageLink) async {
+    // String groupId=groupId;
+    int count;
+    User? user = FirebaseAuth.instance.currentUser;
+    String? currentUserId = user?.uid;
+
+    CollectionReference groupsCollection = FirebaseFirestore.instance.collection('Groups');
+    DocumentSnapshot groupDoc = await groupsCollection.doc(groupId).get();
+
+    if (groupDoc.exists) {
+      Map<String, dynamic> groupData = groupDoc.data() as Map<String, dynamic>;
+      LinkedHashMap<String, dynamic> linkedMap = groupData['messageCount'];
+      Map<String, int> tempMessageCount = Map<String, int>.from(linkedMap);
+      tempMessageCount.forEach((key, value) {
+        if (key != currentUserId) {
+          tempMessageCount[key] = value + 1;
+        }
+      });
+      await groupsCollection.doc(groupId).update({
+        'messageCount': tempMessageCount,
+      });
+    } else {
+      print('Document with groupId $groupId does not exist.');
+    }
+
+    final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
+    String text = "Check Out This Post";
+    if (text.isNotEmpty) {
+      await interactionsCollection.add({
+        'interactedBy': currentUserId,
+        'interactedWith': groupId,
+        'imageUrl': imageLink,
+        'dateTime': DateTime.now(),
+        'message': text,
+        'groupId': groupId,
+        'videoUrl': "",
+        'visibility': true,
+        'audioUrl':"",
+        'baseText':"",
+        'isVanish':false,
+        'seenBy':{},
+        'seenStatus':false,
       });
     }
   }
 
+
   Future<void> getDetails(String? currentUserId) async {
     userIdList = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['friends']?.cast<String>() ?? [];
-
+    groupIdList = (await FirebaseFirestore.instance.collection('users').doc(currentUserId).get()).data()?['groups']?.cast<String>() ?? [];
     for (String userId in userIdList) {
       DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
@@ -501,6 +620,16 @@ class _ImageCollectionWidgetState extends State<ImageCollectionWidget> {
         String firstName = userData['firstName'];
         String profileImageUrl = userData['profileImageUrl'];
         userDataMap[userId] = [firstName, profileImageUrl];
+      }
+    }
+    for (String groupId in groupIdList) {
+      DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(groupId).get();
+
+      if (userSnapshot.exists) {
+        Map<String, dynamic> userData = userSnapshot.data()!;
+        String groupName = userData['groupName'];
+        String groupProfileImageUrl = userData['groupProfileImageUrl'];
+        groupDataMap[groupId] = [groupName, groupProfileImageUrl];
       }
     }
   }

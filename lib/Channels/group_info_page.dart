@@ -20,6 +20,7 @@ class GroupInfoPage extends StatefulWidget {
 }
 
 class _GroupInfoPageState extends State<GroupInfoPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final TextEditingController _groupNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -493,7 +494,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       });
     } else {
       String message = "user details not found";
-      showAlert(context, message);
+      showAlert(_scaffoldKey.currentContext!, message);
     }
   }
 
@@ -615,7 +616,6 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     var userDocumentSnapshot = await groupCollection.doc(groupId).get();
     List<String> userMembers = [];
     if (userDocumentSnapshot.exists) {
-      // userMembers=groupMembers;
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       if (userDocument['groupMembers'].keys != null) {
         userMembers = List<String>.from(userDocument['groupMembers'].keys);

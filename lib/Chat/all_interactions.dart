@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:html';
 import 'dart:js_interop';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,7 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
-import '../reels/video_container.dart';
+
+typedef void StringCallback(String value);
 
 class AllInteractions extends StatefulWidget {
   late String? interactedBy;
@@ -20,6 +20,7 @@ class AllInteractions extends StatefulWidget {
   late bool youBlocked;
   late String? string;
   late String? media;
+  final StringCallback updateState;
   AllInteractions({
     super.key,
     required this.interactedBy,
@@ -29,6 +30,7 @@ class AllInteractions extends StatefulWidget {
     required this.youBlocked,
     this.string = "",
     this.media = "",
+    required this.updateState,
   });
 
   @override
@@ -40,27 +42,55 @@ class _AllInteractionsState extends State<AllInteractions> {
   String interactedByUserFirstName = "";
   String interactedWithUserFirstName = "";
   String interactedByUserProfileImageUrl = "assets/profilelogo.png";
+  late List<String> data2 = [];
 
   late DateTime startDate = DateTime.now();
 
   final AudioPlayer audioPlayer = AudioPlayer();
   Map<String, DateTime> seenBy = {};
-
+  Map<String, List<String>> allReplyMessages = {};
+  // StreamSubscription<QuerySnapshot>? chatSubscription;
   @override
   void initState() {
     super.initState();
     fetchMessengerDetails(widget.groupId);
+    fetchAllReplyMessages();
+    // setupChatListener();
   }
+
+  // void setupChatListener() {
+  //   chatSubscription = chatStream().listen((snapshot) {
+  //     // Handle updates to chat messages
+  //   });
+  // }
+
+  // Stream<QuerySnapshot> chatStream() {
+  //   return FirebaseFirestore.instance
+  //       .collection('interactions')
+  //       .where('groupId', isEqualTo: widget.groupId)
+  //       .where('visibility', isEqualTo: true)
+  //       .where('dateTime', isGreaterThanOrEqualTo: startDate)
+  //       .orderBy('dateTime', descending: true)
+  //       .snapshots();
+  // }
+
+  // @override
+  // void dispose() {
+  //   chatSubscription?.cancel(); // Cancel the chat listener
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
+      stream:
+      //   chatStream(),
+      FirebaseFirestore.instance
           .collection('interactions')
           .where('groupId', isEqualTo: widget.groupId)
           .where('visibility', isEqualTo: true)
           .where('dateTime', isGreaterThanOrEqualTo: startDate)
-          .orderBy('dateTime',descending: true)
+          .orderBy('dateTime', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -74,6 +104,7 @@ class _AllInteractionsState extends State<AllInteractions> {
             reverse: true,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
+              String presentDocumentId = snapshot.data!.docs[index].id;
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               String interactedByUserUid = data['interactedBy'];
               String interactedWithUserId = data['interactedWith'];
@@ -82,6 +113,9 @@ class _AllInteractionsState extends State<AllInteractions> {
               Map<String, DateTime> tempSeen = (seenByMap ?? {}).map(
                 (key, value) => MapEntry(key, (value as Timestamp).toDate()),
               );
+              if (allReplyMessages[presentDocumentId] != null) {
+                data2 = allReplyMessages[presentDocumentId]!;
+              }
               if (interactedByUserValues != null) {
                 interactedByUserFirstName = interactedByUserValues[0]; // First element is the first name
                 interactedByUserProfileImageUrl = interactedByUserValues[1]; // Second element is the profile image URL
@@ -96,6 +130,12 @@ class _AllInteractionsState extends State<AllInteractions> {
               }
               User? user = FirebaseAuth.instance.currentUser;
               String? currentUserId = user?.uid;
+              var alignment = MainAxisAlignment.center;
+              if (currentUserId == data['interactedBy']) {
+                alignment = MainAxisAlignment.end;
+              } else {
+                alignment = MainAxisAlignment.start;
+              }
               String msg1 = "";
               String msg2 = "";
               String msg3 = "";
@@ -125,7 +165,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                             ? false
                             : true,
                 child: Padding(
-                  padding: const EdgeInsets.all(30),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     children: [
                       if (data['baseText'] != "")
@@ -151,55 +191,111 @@ class _AllInteractionsState extends State<AllInteractions> {
                         )
                       else if (data['interactedBy'] == widget.interactedBy)
                         Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: alignment,
+                          // crossAxisAlignment:  MainAxisAlignment.center,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                if (data['audioUrl'] != "")
-                                  AudioMessageWidget(audioUrl: data['audioUrl'], audioPlayer: audioPlayer)
-                                else if (data['videoUrl'] != "" && data['videoUrl']!=null)
-                                  SizedBox(
-                                    child: buildVideoUrl(data['videoUrl'], data),
-                                  )
-                                else if (data['imageUrl'] == "" && data['videoUrl'] == "")
-                                  if (data['message']!.startsWith('https://'))
-                                    SizedBox(
-                                      child: buildMessageUrl(data['message']),
-                                    )
-                                  else
-                                    SizedBox(
-                                      child: buildMessage(data['message']),
-                                    )
-                                else
-                                  SizedBox(
-                                    child: buildImage(data['imageUrl'], data['message']),
-                                  ),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ShowUserDetailsPage(
-                                          userId: data['interactedBy'],
+                            GestureDetector(
+                              onHorizontalDragUpdate: (details) {
+                                if (details.localPosition.dx > MediaQuery.of(context).size.width / 4) {
+                                  widget.updateState(presentDocumentId);
+                                  setState(() {});
+                                }
+                              },
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: alignment,
+                                    children: [
+                                      Container(
+                                        margin: const EdgeInsets.all(10.0),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          border: Border.all(color: Colors.black),
+                                          borderRadius: BorderRadius.circular(10.0),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            if (allReplyMessages[presentDocumentId] != null)
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(5),
+                                                  border: Border.all(width: 2),
+                                                  color: Colors.white60,
+                                                ),
+                                                child: Column(
+                                                  mainAxisAlignment: alignment,
+                                                  children: [
+                                                    Container(
+                                                      color: Colors.blue,
+                                                      child: Column(
+                                                        children: [
+                                                          Text("replied to ${data2[2] == interactedByUserFirstName ? "you" : data2[2]}",
+                                                              style: const TextStyle(color: Colors.black)),
+                                                          if (data2[0] != "")
+                                                            AudioMessageWidget(audioUrl: data2[0], audioPlayer: audioPlayer)
+                                                          else if (data2[3] != "")
+                                                            SizedBox(
+                                                              child: buildVideoUrl(data2[3], data),
+                                                            )
+                                                          else if (data2[1] != "")
+                                                            if (data2[1].startsWith('https://'))
+                                                              SizedBox(
+                                                                child: buildMessageUrl(data2[1]),
+                                                              )
+                                                            else
+                                                              SizedBox(
+                                                                child: buildMessage(data2[1]),
+                                                              )
+                                                          else if (data2[4] != "")
+                                                            SizedBox(
+                                                              child: buildImage(data[4], data2[1]),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            else
+                                              Container(),
+                                            Row(
+                                              children: [
+                                                if (data['audioUrl'] != "")
+                                                  AudioMessageWidget(audioUrl: data['audioUrl'], audioPlayer: audioPlayer)
+                                                else if (data['videoUrl'] != "" && data['videoUrl'] != null)
+                                                  SizedBox(
+                                                    child: buildVideoUrl(data['videoUrl'], data),
+                                                  )
+                                                else if (data['imageUrl'] == "" && data['videoUrl'] == "")
+                                                  if (data['message']!.startsWith('https://'))
+                                                    SizedBox(
+                                                      child: buildMessageUrl(data['message']),
+                                                    )
+                                                  else
+                                                    SizedBox(
+                                                      child: buildMessage(data['message']),
+                                                    )
+                                                else
+                                                  SizedBox(
+                                                    child: buildImage(data['imageUrl'], data['message']),
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.all(10.0),
-                                    padding: const EdgeInsets.all(10.0),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue,
-                                      border: Border.all(color: Colors.black),
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    height: 60,
-                                    // width: 1400,
-                                    child: Row(
-                                      children: [
-                                        Container(
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ShowUserDetailsPage(
+                                                userId: data['interactedBy'],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
                                           width: 30,
                                           height: 30,
                                           decoration: BoxDecoration(
@@ -218,69 +314,68 @@ class _AllInteractionsState extends State<AllInteractions> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(
-                                          width: 20,
+                                      ),
+                                      if (data['seenStatus'] == false)
+                                        const Icon(Icons.check)
+                                      else
+                                        const Row(
+                                          children: [
+                                            Icon(Icons.check, color: Colors.blue),
+                                            Icon(Icons.check, color: Colors.blue),
+                                          ],
                                         ),
-                                        Text(
-                                          interactedByUserFirstName,
-                                          style: const TextStyle(fontSize: 20),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (data['seenStatus'] == false)
-                                  const Icon(Icons.check)
-                                else
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.check, color: Colors.blue),
-                                      Icon(Icons.check, color: Colors.blue),
                                     ],
                                   ),
-                              ],
+                                  Row(
+                                    mainAxisAlignment: alignment,
+                                    children: [
+                                      Text(
+                                        DateFormat('MM-dd HH:mm').format(data['dateTime'].toDate()),
+                                      ),
+                                      const SizedBox(
+                                        width: 70,
+                                      )
+                                    ],
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      buildSeenByWidget(tempSeen, mapOfLists),
+                                    ],
+                                  )
+                                ],
+                              ),
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(DateFormat('yyyy-MM-dd HH:mm').format(data['dateTime'].toDate()),),
-                                SizedBox(width: 36,)
-                              ],
-                            ),
-                            buildSeenByWidget(tempSeen, mapOfLists),
                           ],
                         )
                       else if (data['interactedBy'] != widget.interactedBy)
                         Column(
+                          mainAxisAlignment: alignment,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ShowUserDetailsPage(
-                                          userId: data['interactedBy'],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.all(10.0),
-                                    padding: const EdgeInsets.all(10.0),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue,
-                                      border: Border.all(color: Colors.black),
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-
-                                    height: 60,
-                                    // width: 1400,
-                                    child: Row(
-                                      children: [
-                                        Container(
+                            GestureDetector(
+                              onHorizontalDragUpdate: (details) {
+                                if (details.localPosition.dx < MediaQuery.of(context).size.width / 4) {
+                                  widget.updateState(presentDocumentId);
+                                  setState(() {});
+                                }
+                              },
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: alignment,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ShowUserDetailsPage(
+                                                userId: data['interactedBy'],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
                                           width: 30,
                                           height: 30,
                                           decoration: BoxDecoration(
@@ -299,47 +394,103 @@ class _AllInteractionsState extends State<AllInteractions> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(
-                                          width: 20,
+                                      ),
+                                      Container(
+                                        margin: const EdgeInsets.all(10.0),
+                                        // padding: const EdgeInsets.all(10.0),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          border: Border.all(color: Colors.black),
+                                          borderRadius: BorderRadius.circular(10.0),
                                         ),
-                                        Text(
-                                          interactedByUserFirstName,
-                                          style: const TextStyle(fontSize: 20),
+                                        child: Column(
+                                          children: [
+                                            if (allReplyMessages[presentDocumentId] != null)
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(5),
+                                                  border: Border.all(width: 2),
+                                                  color: Colors.white60,
+                                                ),
+                                                child: Column(
+                                                  mainAxisAlignment: alignment,
+                                                  children: [
+                                                    Container(
+                                                      color: Colors.blue,
+                                                      child: Column(
+                                                        children: [
+                                                          Text("replied to ${data2[2] == interactedByUserFirstName ? "you" : data2[2]}",
+                                                              style: const TextStyle(color: Colors.black)),
+                                                          if (data2[0] != "")
+                                                            AudioMessageWidget(audioUrl: data2[0], audioPlayer: audioPlayer)
+                                                          else if (data2[3] != "")
+                                                            SizedBox(
+                                                              child: buildVideoUrl(data2[3], data),
+                                                            )
+                                                          else if (data2[1] != "")
+                                                            if (data2[1].startsWith('https://'))
+                                                              SizedBox(
+                                                                child: buildMessageUrl(data2[1]),
+                                                              )
+                                                            else
+                                                              SizedBox(
+                                                                child: buildMessage(data2[1]),
+                                                              )
+                                                          else if (data2[4] != "")
+                                                            SizedBox(
+                                                              child: buildImage(data[4], data2[1]),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            else
+                                              Container(),
+                                            Row(
+                                              children: [
+                                                if (data['audioUrl'] != "")
+                                                  AudioMessageWidget(audioUrl: data['audioUrl'], audioPlayer: audioPlayer)
+                                                else if (data['videoUrl'] != "" && data['videoUrl'] != null)
+                                                  SizedBox(
+                                                    child: buildVideoUrl(data['videoUrl'], data),
+                                                  )
+                                                else if (data['imageUrl'] == "" && data['videoUrl'] == "")
+                                                  if (data['message']!.startsWith('https://'))
+                                                    SizedBox(
+                                                      child: buildMessageUrl(data['message']),
+                                                    )
+                                                  else
+                                                    SizedBox(
+                                                      child: buildMessage(data['message']),
+                                                    )
+                                                else
+                                                  SizedBox(
+                                                    child: buildImage(data['imageUrl'], data['message']),
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                if (data['audioUrl'] != "")
-                                  AudioMessageWidget(
-                                    audioUrl: data['audioUrl'],
-                                    audioPlayer: audioPlayer,
-                                  )
-                                else if (data['videoUrl'] != "" && data['videoUrl']!=null)
-                                  SizedBox(
-                                    child: buildVideoUrl(data['videoUrl'], data),
-                                  )
-                                else if (data['imageUrl'] == "")
-                                  if (data['message']!.startsWith('https://'))
-                                    SizedBox(
-                                      child: buildMessageUrl(data['message']),
-                                    )
-                                  else
-                                    SizedBox(
-                                      child: buildMessage(data['message']),
-                                    )
-                                else
-                                  SizedBox(
-                                    child: buildImage(data['imageUrl'], data['message']),
+                                  Row(
+                                    mainAxisAlignment: alignment,
+                                    children: [
+                                      const SizedBox(
+                                        width: 40,
+                                      ),
+                                      Text(
+                                        DateFormat('MM-dd HH:mm').format(data['dateTime'].toDate()),
+                                      ),
+                                    ],
                                   ),
-                              ],
+                                  // buildSeenByWidget(tempSeen, mapOfLists),
+                                ],
+                              ),
                             ),
-                            Row(
-                              children: [
-                                const SizedBox(width:10 ,),
-                                Text(DateFormat('yyyy-MM-dd HH:mm').format(data['dateTime'].toDate()),),
-                              ],
-                            )
                           ],
                         ),
                       if (widget.youBlocked)
@@ -415,7 +566,7 @@ class _AllInteractionsState extends State<AllInteractions> {
       var userDocumentSnapshot = await usersCollection.doc(userMembers[0]).get();
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       // startDate=userDocument['dateTime'];
-      startDate = userDocument['dateTime'].toDate();
+      startDate =  DateTime.now().subtract(const Duration(days: 365));
     }
     setState(() {
       startDate;
@@ -440,6 +591,31 @@ class _AllInteractionsState extends State<AllInteractions> {
     }
   }
 
+  Future<void> fetchAllReplyMessages() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('interactions').where('replyTo', isNotEqualTo: "").get();
+    // List<String> fieldValues = [];
+    for (QueryDocumentSnapshot documentSnapshot in querySnapshot.docs) {
+      Map<String, dynamic> data1 = documentSnapshot.data() as Map<String, dynamic>;
+      String replyId = data1['replyTo'];
+      DocumentSnapshot documentSnapshots = await FirebaseFirestore.instance.collection('interactions').doc(replyId).get();
+      Map<String, dynamic> data = documentSnapshots.data() as Map<String, dynamic>;
+
+      DocumentSnapshot documentSnapshot2 = await FirebaseFirestore.instance.collection('users').doc(data['interactedBy']).get();
+      String name = documentSnapshot2['firstName'] ?? "";
+      String imageUrl = data['imageUrl'] ?? "";
+      String videoUrl = data['videoUrl'] ?? "";
+      String audioUrl = data['audioUrl'] ?? "";
+      String message = data['message'] ?? "";
+      allReplyMessages[documentSnapshot.id] = [audioUrl, message, name, videoUrl, imageUrl];
+    }
+    if(mounted) {
+      setState(() {
+        allReplyMessages;
+        // print(allReplyMessages);
+      });
+    }
+  }
+
   Future<void> updateSeenList() async {
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
@@ -447,7 +623,7 @@ class _AllInteractionsState extends State<AllInteractions> {
         .collection('interactions')
         .where('groupId', isEqualTo: widget.groupId)
         .where('visibility', isEqualTo: true)
-        .where('interactedBy',isNotEqualTo: currentUserId)
+        .where('interactedBy', isNotEqualTo: currentUserId)
         .get();
 
     for (QueryDocumentSnapshot document in querySnapshot.docs) {
@@ -455,7 +631,7 @@ class _AllInteractionsState extends State<AllInteractions> {
       Map<String, DateTime> tempSeen = (seenByMap ?? {}).map(
         (key, value) => MapEntry(key, (value as Timestamp).toDate()),
       );
-      if(document['dateTime'].toDate().isAfter(startDate) || document['baseText']=="") {
+      if (document['dateTime'].toDate().isAfter(startDate) || document['baseText'] == "") {
         if (tempSeen.isEmpty) {
           tempSeen[currentUserId!] = DateTime.now();
           await FirebaseFirestore.instance.collection('interactions').doc(document.id).update({'seenBy': tempSeen});
@@ -468,84 +644,10 @@ class _AllInteractionsState extends State<AllInteractions> {
     }
   }
 
-  Widget buildVideoUrl(String urlString, Map<String, dynamic> data) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text(data['message'],style: const TextStyle(fontSize: 24,color: Colors.black87,fontWeight: FontWeight.w400)),
-        ),
-        Container(
-          width: 550,
-          height: 330,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: VideoContainer(
-            videoUrl: urlString,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget buildMessageUrl(String message) {
-    return Visibility(
-      visible: message.startsWith('https://'),
-      child: Column(
-        children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () {
-                window.open(message, '_blank');
-              },
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Text(
-                  message,
-                  style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildMessage(String message) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text(message,style: const TextStyle(fontSize: 24,color: Colors.black87,fontWeight: FontWeight.w400)),
-        ),
-      ],
-    );
-  }
-
-  Widget buildImage(String imageUrl, String message) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: Text(message,style: const TextStyle(fontSize: 24,color: Colors.black87,fontWeight: FontWeight.w400)),
-        ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Image.network(
-            imageUrl,
-            width: 100,
-            height: 100,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget buildSeenByWidget(Map<String, DateTime> tempSeen, Map<String, List<String>> mapOfLists) {
     int seenCount = tempSeen.length;
-    print("seen count is $seenCount");
     int iterationCount = seenCount <= 3 ? seenCount : 3;
     int remainingCount = seenCount - iterationCount;
     List<Widget> seenWidgets = [];
@@ -588,7 +690,7 @@ class _AllInteractionsState extends State<AllInteractions> {
     );
 
     return Visibility(
-      visible: seenCount>0,
+      visible: seenCount > 0,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
@@ -603,7 +705,9 @@ class _AllInteractionsState extends State<AllInteractions> {
           Row(
             children: seenWidgets,
           ),
-          const SizedBox(width: 200,)
+          const SizedBox(
+            width: 200,
+          )
         ],
       ),
     );
@@ -614,7 +718,7 @@ class _AllInteractionsState extends State<AllInteractions> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          // alignment: Alignment.centerRight,
+          alignment: Alignment.centerRight,
           title: const Text("Seen By"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -651,4 +755,6 @@ class _AllInteractionsState extends State<AllInteractions> {
       },
     );
   }
+
+
 }

@@ -1,8 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:facebook/Authentication/password_reset.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../base_page.dart';
 import '../home/home_page.dart';
 import 'create_account_page.dart';
@@ -194,7 +194,9 @@ class _LoginPageState extends State<LoginPage> {
         email: email,
         password: password,
       );
-      // Authentication successful
+      User? user=FirebaseAuth.instance.currentUser;
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(user?.uid);
+      await userDocRef.update({'isOnline': true});
       Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeScreen(email: email,)));
       return true;
     } on FirebaseAuthException catch (e) {

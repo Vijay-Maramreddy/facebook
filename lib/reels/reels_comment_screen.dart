@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../home/show_user_details_page.dart';
@@ -93,7 +92,7 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
+                  child: SizedBox(
                     width: 300,
                     height: 100,
                     child: TextField(
@@ -137,7 +136,7 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
 
 class CommentDisplayWidget extends StatefulWidget {
   final String? reelDocumentId;
-  CommentDisplayWidget({required this.reelDocumentId});
+  const CommentDisplayWidget({super.key, required this.reelDocumentId});
 
   @override
   _CommentDisplayWidgetState createState() => _CommentDisplayWidgetState();
@@ -145,7 +144,7 @@ class CommentDisplayWidget extends StatefulWidget {
 
 class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
   // Map<String, bool> _replyTextFieldsVisibility = {};
-  Map<String, TextEditingController> _replyControllers = {};
+  final Map<String, TextEditingController> _replyControllers = {};
   Map<String, List<String>> replies = {};
   bool showReplies = false;
   late String currentUserName = '';
@@ -165,13 +164,13 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
           .get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircularProgressIndicator(); // Display a loading indicator
+          return const CircularProgressIndicator(); // Display a loading indicator
         } else if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}');
         } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Text('No comments available.');
+          return const Text('No comments available.');
         } else {
-          return Container(
+          return SizedBox(
             height: 300,
             child: ListView.builder(
               itemCount: snapshot.data!.docs.length,
@@ -252,81 +251,79 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
                       ),
                       Row(
                         children: [
-                          SizedBox(width: 20),
+                          const SizedBox(width: 20),
                           if (commentDoc.data()?['replies'] != null)
-                            Container(
-                              child: Column(
-                                children: commentDoc.data()?['replies'].entries.map((entry) {
-                                  String key = entry.key;
-                                  List<dynamic> values = entry.value as List<dynamic>;
+                            Column(
+                              children: commentDoc.data()?['replies'].entries.map((entry) {
+                                String key = entry.key;
+                                List<dynamic> values = entry.value as List<dynamic>;
 
-                                  // Ensure each value is a String
-                                  List<String> stringValues = values.map((value) => value.toString()).toList();
+                                // Ensure each value is a String
+                                List<String> stringValues = values.map((value) => value.toString()).toList();
 
-                                  return Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                    Container(
-                                    height: 40,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ShowUserDetailsPage(
-                                              userId: stringValues[0],
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                  SizedBox(
+                                  height: 40,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ShowUserDetailsPage(
+                                            userId: stringValues[0],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 30,
+                                          height: 30,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.blue,
+                                              width: 0.1,
                                             ),
                                           ),
-                                        );
-                                      },
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 30,
-                                            height: 30,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Colors.blue,
-                                                width: 0.1,
-                                              ),
-                                            ),
-                                            child: ClipOval(
-                                              child: Image.network(
-                                                stringValues[1],
-                                                width: 30,
-                                                height: 30,
-                                                fit: BoxFit.cover,
-                                              ),
+                                          child: ClipOval(
+                                            child: Image.network(
+                                              stringValues[1],
+                                              width: 30,
+                                              height: 30,
+                                              fit: BoxFit.cover,
                                             ),
                                           ),
-                                          Text(
-                                            stringValues[2],
-                                            style: const TextStyle(fontSize: 20),
-                                          ),
-                                          Text("    : ")
-                                        ],
-                                      ),
+                                        ),
+                                        Text(
+                                          stringValues[2],
+                                          style: const TextStyle(fontSize: 20),
+                                        ),
+                                        const Text("    : ")
+                                      ],
                                     ),
                                   ),
-                                      Column(
-                                        children: [
-                                          SizedBox(height: 12,),
-                                          Row(
-                                            children: [
-                                              SizedBox(width: 15,),
-                                              Text(stringValues[3],style: TextStyle(fontSize: 16)),
-                                              SizedBox(width: 20,),
-                                              Text(key),
-                                            ],
-                                          )
-                                        ],
-                                      )
+                                ),
+                                    Column(
+                                      children: [
+                                        const SizedBox(height: 12,),
+                                        Row(
+                                          children: [
+                                            const SizedBox(width: 15,),
+                                            Text(stringValues[3],style: const TextStyle(fontSize: 16)),
+                                            const SizedBox(width: 20,),
+                                            Text(key),
+                                          ],
+                                        )
+                                      ],
+                                    )
 
-                                    ],
-                                  );
-                                }).toList().cast<Widget>(),  // Cast the list to List<Widget>
-                              ),
+                                  ],
+                                );
+                              }).toList().cast<Widget>(),  // Cast the list to List<Widget>
                             )
                         ],
                       ),
@@ -338,7 +335,7 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
                             _replyControllers[commentDoc.id] = TextEditingController();
                           });
                         },
-                        child: Text('Reply'),
+                        child: const Text('Reply'),
                       ),
 
                       // Display the reply text field when the button is pressed
@@ -347,7 +344,7 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
                           children: [
                             TextField(
                               controller: _replyControllers[commentDoc.id],
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 hintText: 'Add a reply...',
                               ),
                               onSubmitted: (String reply) async {
@@ -357,7 +354,7 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
                                 User? user = FirebaseAuth.instance.currentUser;
                                 String? currentUserId = user?.uid;
                                 await getCurrentUserName(userId: currentUserId);
-                                List<String> newReplyData = [currentUserId!,currentUserProfileImage!,currentUserName!, reply];
+                                List<String> newReplyData = [currentUserId!,currentUserProfileImage,currentUserName, reply];
                                 DateTime now = DateTime.now();
                                 String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
                                 replies[formattedDateTime] = newReplyData;
