@@ -29,6 +29,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int requestCount = 0;
   late Uint8List _image;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   late String title;
@@ -66,8 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchFriends();
     User? user = FirebaseAuth.instance.currentUser;
     currentUserId = user!.uid;
-    super.initState();
+    fetchFriendRequestCount();
     fetchNewMessageCount();
+    super.initState();
   }
 
   @override
@@ -96,17 +98,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.mobile_friendly_rounded),
-                  color: Colors.white,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const FriendRequestPage(),
-                      ),
-                    );
-                  },
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.mobile_friendly_rounded),
+                      color: Colors.white,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FriendRequestPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    if (requestCount > 0)
+                      Text("$requestCount",style: const TextStyle(color: Colors.white),),
+                  ],
                 ),
                 IconButton(
                   padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
@@ -535,7 +543,6 @@ class _HomeScreenState extends State<HomeScreen> {
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').get();
 
     for (QueryDocumentSnapshot document in querySnapshot.docs) {
-      // Access the firstName field from each document and add it to the list
       var firstName = document['firstName'];
       if (firstName != null) {
         allNames.add(firstName.toString());
@@ -586,6 +593,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       friendsIds = [currentUserId!];
     }
+    setState(() {
+      friendsIds;
+    });
   }
 
   Future<void> fetchNewMessageCount() async {
@@ -600,18 +610,24 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
     DocumentSnapshot userDocument = await usersCollection.doc(currentUserId).get();
-    List<String>? groups = (userDocument.get('groups') as List?)
-        ?.map((dynamic group) => group.toString())
-        .toList();
-    for(String groupId in groups!){
+    List<String>? groups = (userDocument.get('groups') as List?)?.map((dynamic group) => group.toString()).toList();
+    for (String groupId in groups!) {
       DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('Groups').doc(groupId).get();
       if (documentSnapshot.exists) {
         Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
-        newMessagesCount+=data['messageCount'][currentUserId] as int;
+        newMessagesCount += data['messageCount'][currentUserId] as int;
       }
     }
     setState(() {
       newMessagesCount;
+    });
+  }
+
+  Future<void> fetchFriendRequestCount() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('friendRequests').where('requestedTo', isEqualTo: currentUserId).get();
+    requestCount = querySnapshot.docs.length;
+    setState(() {
+      requestCount;
     });
   }
 }

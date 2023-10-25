@@ -362,7 +362,33 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
                               visible: friendStatus,
                               child: ElevatedButton(
                                   onPressed: () {
-                                    removeFriend();
+                                    showDialog(context: context, builder: (context) {
+                                      return Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Text("Are you sure you want to remove ${_firstNameController.text} as friend "),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              ElevatedButton(onPressed:(){
+                                                Navigator.pop(context);
+                                              },
+                                                  child: const Text("Cancel")
+                                              ),
+                                              ElevatedButton(onPressed:(){
+                                                removeFriend();
+                                                Navigator.pop(context);
+                                              },
+                                                  child: const Text("Yes")
+                                              ),
+                                            ],
+                                          )
+
+                                        ],
+                                      );
+                                    },
+                                    );
                                   },
                                   child: const Text("Remove Friend")
                               )
@@ -466,6 +492,10 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     requestedTo = widget.userId!;
     friendStatus = false;
     requestStatus = false;
+    setState(() {
+      friendStatus;
+      requestStatus;
+    });
     DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(requestedTo);
     userDoc.get().then((DocumentSnapshot userSnapshot) {
       if (userSnapshot.exists) {
@@ -561,7 +591,6 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
   }
 
   Future<void> addToBlocked() async {
-    // Get the document reference
     User? user = FirebaseAuth.instance.currentUser;
     String? currentUserId = user?.uid;
     DocumentReference documentReference =

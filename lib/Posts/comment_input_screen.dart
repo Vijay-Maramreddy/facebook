@@ -73,15 +73,12 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       return; // Check if the widget is still mounted
     }
     String comment = _commentController.text;
-
-    // Get the current user's information
     User? user = FirebaseAuth.instance.currentUser;
     String? userId = user?.uid;
     DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
     if (userSnapshot.exists) {
       Map<String, dynamic> userData = userSnapshot.data()!;
-      // Access individual fields
       profileImageUrl = userData['profileImageUrl'];
       firstName = userData['firstName'];
 
@@ -91,11 +88,8 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     } else {
       print('User with UID $userId not found.');
     }
-    // Get the current date and time
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-
-    // Create a map to store the comment data
     Map<String, dynamic> commentData = {
       'comment': comment,
       'userId': userId,
@@ -111,7 +105,6 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     String groupId=combineIds(userId,retrievedDoc.userId);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-    // String message="liked your post";
     await interactionsCollection.add({
       'interactedBy': userId,
       'interactedWith':retrievedDoc.userId,
@@ -199,6 +192,7 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
                       width: 300,
                       height: 100,
                       child: TextField(
+                        autofocus: true,
                         controller: _commentController,
                         decoration: const InputDecoration(
                           hintText: 'Message....',

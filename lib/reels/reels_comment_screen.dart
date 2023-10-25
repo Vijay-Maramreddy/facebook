@@ -96,6 +96,7 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
                     width: 300,
                     height: 100,
                     child: TextField(
+                      autofocus: true,
                       controller: _commentController,
                       decoration: const InputDecoration(
                         hintText: 'Message....',
@@ -143,7 +144,6 @@ class CommentDisplayWidget extends StatefulWidget {
 }
 
 class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
-  // Map<String, bool> _replyTextFieldsVisibility = {};
   final Map<String, TextEditingController> _replyControllers = {};
   Map<String, List<String>> replies = {};
   bool showReplies = false;

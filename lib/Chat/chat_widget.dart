@@ -7,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
@@ -267,11 +266,12 @@ class _ChatWidgetState extends State<ChatWidget> {
                         alignment: Alignment.center,
                         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                         width: 700,
-                        height: 45,
+                        // height: 45,
                         child: Row(
                           children: [
                             Expanded(
                               child: TextField(
+                                autofocus: true,
                                 controller: _messageController,
                                 decoration: const InputDecoration(
                                   hintText: 'Enter a message',

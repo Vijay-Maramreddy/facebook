@@ -39,7 +39,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
         stream: FirebaseFirestore.instance.collection('reels').orderBy('dateTime', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
+            return const LinearProgressIndicator();
           }
           if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
@@ -63,7 +63,7 @@ class _ReelsCollectionWidgetState extends State<ReelsCollectionWidget> {
                     future: getProfileDetails(postUserId),
                     builder: (context, profileDetailsSnapshot) {
                       if (profileDetailsSnapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
+                        return const LinearProgressIndicator();
                       } else if (profileDetailsSnapshot.hasError) {
                         return Text('Error: ${profileDetailsSnapshot.error}');
                       } else {

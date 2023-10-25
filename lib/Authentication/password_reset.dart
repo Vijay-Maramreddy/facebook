@@ -96,7 +96,6 @@ class _PasswordResetState extends State<PasswordReset> {
                           padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                           child: TextField(
                             controller: _passwordController,
-                            // keyboardType: TextInputType.phone,
                             decoration: const InputDecoration(
                               labelText: "Password",
                             ),

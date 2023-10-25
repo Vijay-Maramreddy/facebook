@@ -178,7 +178,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                         else if (callBackSnapshot?['videoUrl'] != "" && callBackSnapshot?['videoUrl'] != null)
                           SizedBox(
                             child:Text(callBackSnapshot?['message']),
-                            // child: buildVideoUrl(callBackSnapshot?['videoUrl'], callBackSnapshot as Map<String, dynamic>),
                           )
                         else if (callBackSnapshot?['imageUrl'] == "" && callBackSnapshot?['videoUrl'] == "")
                           if (callBackSnapshot?['message']!.startsWith('https://'))
@@ -211,17 +210,18 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                   decoration: customBoxDecoration,
                   margin: const EdgeInsets.all(10),
                   alignment: Alignment.center,
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10,0),
                   width: 700,
-                  height: 45,
+                  // height: 45,
                   child: Row(
                     children: [
                       Expanded(
                         child: TextField(
+                          autofocus: true,
                           controller: _messageController,
                           decoration: const InputDecoration(
                             hintText: 'Enter a message',
-                            border: InputBorder.none,
+                            // border: InputBorder.none,
                           ),
                           onSubmitted: (text){sendMessageOrIcon();},
                         ),
@@ -492,7 +492,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         looping: true,
       );
       await showDialog(
-        context: _scaffoldKey.currentContext!,
+        context: context,
         builder: (context) {
           return AlertDialog(
             title: const Text('Send a Video'),

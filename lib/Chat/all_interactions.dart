@@ -49,13 +49,20 @@ class _AllInteractionsState extends State<AllInteractions> {
   final AudioPlayer audioPlayer = AudioPlayer();
   Map<String, DateTime> seenBy = {};
   Map<String, List<String>> allReplyMessages = {};
+  bool loaded=false;
   // StreamSubscription<QuerySnapshot>? chatSubscription;
   @override
   void initState() {
-    super.initState();
+
     fetchMessengerDetails(widget.groupId);
     fetchAllReplyMessages();
     // setupChatListener();
+
+    super.initState();
+
+    setState(() {
+      loaded=true;
+    });
   }
 
   // void setupChatListener() {
@@ -84,14 +91,14 @@ class _AllInteractionsState extends State<AllInteractions> {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream:
-      //   chatStream(),
-      FirebaseFirestore.instance
-          .collection('interactions')
-          .where('groupId', isEqualTo: widget.groupId)
-          .where('visibility', isEqualTo: true)
-          .where('dateTime', isGreaterThanOrEqualTo: startDate)
-          .orderBy('dateTime', descending: true)
-          .snapshots(),
+          //   chatStream(),
+          FirebaseFirestore.instance
+              .collection('interactions')
+              .where('groupId', isEqualTo: widget.groupId)
+              .where('visibility', isEqualTo: true)
+              .where('dateTime', isGreaterThanOrEqualTo: startDate)
+              .orderBy('dateTime', descending: true)
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -107,8 +114,14 @@ class _AllInteractionsState extends State<AllInteractions> {
               String presentDocumentId = snapshot.data!.docs[index].id;
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               String interactedByUserUid = data['interactedBy'];
+              print("interactedByUserUid is $interactedByUserUid");
               String interactedWithUserId = data['interactedWith'];
               List<String>? interactedByUserValues = mapOfLists[interactedByUserUid];
+              if(interactedByUserValues==null)
+                {
+                  fetchMessengerDetails(widget.groupId);
+                }
+              print("interactedByUserValues are $interactedByUserValues");
               Map<String, dynamic> seenByMap = data['seenBy'] ?? {};
               Map<String, DateTime> tempSeen = (seenByMap ?? {}).map(
                 (key, value) => MapEntry(key, (value as Timestamp).toDate()),
@@ -116,12 +129,14 @@ class _AllInteractionsState extends State<AllInteractions> {
               if (allReplyMessages[presentDocumentId] != null) {
                 data2 = allReplyMessages[presentDocumentId]!;
               }
-              if (interactedByUserValues != null) {
-                interactedByUserFirstName = interactedByUserValues[0]; // First element is the first name
-                interactedByUserProfileImageUrl = interactedByUserValues[1]; // Second element is the profile image URL
-              } else {
-                print('No values found for the user with UID: $interactedByUserUid');
-              }
+              interactedByUserFirstName = interactedByUserValues![0]; // First element is the first name
+              interactedByUserProfileImageUrl = interactedByUserValues[1];
+              // if (interactedByUserValues != null) {
+              //   interactedByUserFirstName = interactedByUserValues[0]; // First element is the first name
+              //   interactedByUserProfileImageUrl = interactedByUserValues[1]; // Second element is the profile image URL
+              // } else {
+              //   print('No values found for the user with UID: $interactedByUserUid');
+              // }
               List<String>? interactedWithUserValues = mapOfLists[interactedWithUserId];
               if (interactedWithUserValues != null) {
                 interactedWithUserFirstName = interactedWithUserValues[0]; // First element is the first name
@@ -183,16 +198,15 @@ class _AllInteractionsState extends State<AllInteractions> {
                                 ),
                                 padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
                                 child: Text("$msg1 $msg3 $msg2")),
-                            Text("${data['dateTime'].toDate()}"),
+                            Text(DateFormat('MM-dd HH:mm').format(data['dateTime'].toDate())),
                             const SizedBox(
                               height: 20,
                             )
                           ],
                         )
-                      else if (data['interactedBy'] == widget.interactedBy)
+                      else if (interactedByUserUid == currentUserId)
                         Column(
                           mainAxisAlignment: alignment,
-                          // crossAxisAlignment:  MainAxisAlignment.center,
                           children: [
                             GestureDetector(
                               onHorizontalDragUpdate: (details) {
@@ -229,7 +243,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                                       color: Colors.blue,
                                                       child: Column(
                                                         children: [
-                                                          Text("replied to ${data2[2] == interactedByUserFirstName ? "you" : data2[2]}",
+                                                          Text("replied to ${data2[2] == currentUserId ? "you" : data2[2]}",
                                                               style: const TextStyle(color: Colors.black)),
                                                           if (data2[0] != "")
                                                             AudioMessageWidget(audioUrl: data2[0], audioPlayer: audioPlayer)
@@ -348,7 +362,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                             ),
                           ],
                         )
-                      else if (data['interactedBy'] != widget.interactedBy)
+                      else if (interactedByUserUid != currentUserId)
                         Column(
                           mainAxisAlignment: alignment,
                           children: [
@@ -370,7 +384,7 @@ class _AllInteractionsState extends State<AllInteractions> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => ShowUserDetailsPage(
-                                                userId: data['interactedBy'],
+                                                userId: interactedByUserUid,
                                               ),
                                             ),
                                           );
@@ -566,11 +580,12 @@ class _AllInteractionsState extends State<AllInteractions> {
       var userDocumentSnapshot = await usersCollection.doc(userMembers[0]).get();
       var userDocument = userDocumentSnapshot.data() as Map<String, dynamic>;
       // startDate=userDocument['dateTime'];
-      startDate =  DateTime.now().subtract(const Duration(days: 365));
+      startDate = DateTime.now().subtract(const Duration(days: 365));
     }
     setState(() {
       startDate;
     });
+    print("the groupmembers are :$userMembers");
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
 
     for (String userMember in userMembers) {
@@ -587,6 +602,7 @@ class _AllInteractionsState extends State<AllInteractions> {
     if (mounted) {
       setState(() {
         mapOfLists;
+        print("the total values are :$mapOfLists");
       });
     }
   }
@@ -608,7 +624,7 @@ class _AllInteractionsState extends State<AllInteractions> {
       String message = data['message'] ?? "";
       allReplyMessages[documentSnapshot.id] = [audioUrl, message, name, videoUrl, imageUrl];
     }
-    if(mounted) {
+    if (mounted) {
       setState(() {
         allReplyMessages;
         // print(allReplyMessages);
@@ -643,8 +659,6 @@ class _AllInteractionsState extends State<AllInteractions> {
       }
     }
   }
-
-
 
   Widget buildSeenByWidget(Map<String, DateTime> tempSeen, Map<String, List<String>> mapOfLists) {
     int seenCount = tempSeen.length;
@@ -756,5 +770,12 @@ class _AllInteractionsState extends State<AllInteractions> {
     );
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+    mapOfLists={};
 
+
+
+  }
 }

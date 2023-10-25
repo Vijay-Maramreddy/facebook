@@ -275,7 +275,7 @@ class _AudioMessageWidgetState extends State<AudioMessageWidget> {
               Padding(
                 padding: const EdgeInsets.all(4.0),
                 child: SizedBox(
-                  width: 120,
+                  width: 350,
                   child: LinearProgressIndicator(
                     value: progress,
                     valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
@@ -295,13 +295,13 @@ Widget buildVideoUrl(String urlString, Map<String, dynamic> data) {
   return Column(
     children: [
       Container(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
         child: Text(data['message'], style: const TextStyle(fontSize: 24, color: Colors.black87, fontWeight: FontWeight.w400)),
       ),
       Container(
-        width: 450,
-        height: 270,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        width: 400,
+        height: 260,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
         child: VideoContainer(
           videoUrl: urlString,
         ),
@@ -339,9 +339,14 @@ Widget buildMessage(String message) {
   return Column(
     children: [
       Container(
+        width: 400,
         color: Colors.white60,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-        child: Text(message, style: const TextStyle(fontSize: 20, color: Colors.black87, fontWeight: FontWeight.w400)),
+        child: Column(
+          children: [
+            ExpandableMessageWidget(message:message, maxLines: 2),
+          ],
+        ),
       ),
     ],
   );
@@ -366,3 +371,65 @@ Widget buildImage(String imageUrl, String message) {
     ],
   );
 }
+
+class ExpandableMessageWidget extends StatefulWidget {
+  final String message;
+  final int maxLines;
+
+  ExpandableMessageWidget({required this.message, this.maxLines = 2});
+
+  @override
+  _ExpandableMessageWidgetState createState() => _ExpandableMessageWidgetState();
+}
+
+class _ExpandableMessageWidgetState extends State<ExpandableMessageWidget> {
+  bool isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 400,
+          color: Colors.white60,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Column(
+            children: [
+              Text(
+                widget.message,
+                style: const TextStyle(fontSize: 20, color: Colors.black87, fontWeight: FontWeight.w400),
+                maxLines: isExpanded ? null : widget.maxLines,
+                overflow: isExpanded ? null : TextOverflow.ellipsis,
+              ),
+              if (!isExpanded && widget.message.length > widget.maxLines * 40) // Adjust 40 based on your font size and preferences
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isExpanded = true;
+                    });
+                  },
+                  child: Text(
+                    'Show More',
+                    style: const TextStyle(fontSize: 20, color: Colors.blue),
+                  ),
+                ),
+              if (isExpanded)
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isExpanded = false;
+                    });
+                  },
+                  child: Text(
+                    'Show Less',
+                    style: const TextStyle(fontSize: 20, color: Colors.blue),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+

@@ -15,7 +15,7 @@ import 'image_page_view_dialog.dart';
 
 class StatusCollectionWidget extends StatefulWidget {
   late bool? showOnlyCurrentUserPosts;
-  final List<String> friendsIds;
+   late List<String> friendsIds;
   final VoidCallback? onUploadStatus;
 
   StatusCollectionWidget({super.key, required this.showOnlyCurrentUserPosts, required this.friendsIds, this.onUploadStatus});
@@ -25,10 +25,9 @@ class StatusCollectionWidget extends StatefulWidget {
 }
 
 class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late String profileImageUrl = '';
   late String firstName = '';
-  late final List<String> friendsIds;
+  late  List<String> allFriendsIds = widget.friendsIds;
   bool status=true;
   late Uint8List _image;
   late Uint8List imageFile;
@@ -38,16 +37,19 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
 
   Map<String, DocumentSnapshot> snapshotMap = {};
 
+
   @override
   void initState() {
-    // TODO: implement initState
-    friendsIds = widget.friendsIds;
-    performQuery();
+    fetchFriends();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    if(allFriendsIds.isEmpty)
+      {
+        fetchFriends();
+      }
     if (!snapshotMap.containsKey(user?.uid)) {
       return Row(
         children: [
@@ -216,7 +218,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
             }
           } else {
             String message = "user details not found";
-            showAlert(_scaffoldKey.currentContext!, message);
+            showAlert(context, message);
           }
           await addImageUrlToFirebase(
               user.uid, imageUrl, title!, likes, commentsCount, dateTime, likedBy, profileImageUrl, firstName, status, shareCount);
@@ -394,7 +396,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
 
                 if (querySnapshot.docs.isNotEmpty) {
                   showDialog(
-                    context: _scaffoldKey.currentContext!,
+                    context: context,
                     builder: (BuildContext context) {
                       return ImagePageViewDialog(
                         querySnapshot: querySnapshot,
@@ -433,10 +435,10 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
         return false;
       }
     }
-    if (friendsIds.isEmpty) {
+    if (allFriendsIds.isEmpty) {
       return true;
     }
-    if (friendsIds.contains(userId)) {
+    if (allFriendsIds.contains(userId)) {
       return true;
     } else {
       return false;
@@ -457,7 +459,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       }
     } else {
       String message = "user details not found";
-      showAlert(_scaffoldKey.currentContext!, message);
+      showAlert(context, message);
     }
   }
 
@@ -472,7 +474,11 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   }
 
   Future<void> performQuery() async {
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('images').where('status', isEqualTo: true).orderBy('dateTime').get();
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('images')
+        .where('status', isEqualTo: true)
+        .where('userId',whereIn: allFriendsIds)
+        .orderBy('dateTime')
+        .get();
 
     for (var document in querySnapshot.docs) {
       snapshotMap[document['userId']] = document;
@@ -489,6 +495,16 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       });
     } catch (e) {
       print('Error deleting document: $e');
+    }
+  }
+
+  void fetchFriends() {
+    allFriendsIds = widget.friendsIds;
+    setState(() {
+      allFriendsIds;
+    });
+    if (allFriendsIds.isNotEmpty) {
+      performQuery();
     }
   }
 }
