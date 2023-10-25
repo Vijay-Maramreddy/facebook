@@ -10,7 +10,7 @@ import 'package:just_audio/just_audio.dart';
 import '../base_page.dart';
 import '../home/show_user_details_page.dart';
 
-typedef void StringCallback(String value);
+typedef StringCallback = void Function(String value);
 
 class AllInteractions extends StatefulWidget {
   late String? interactedBy;
@@ -121,6 +121,11 @@ class _AllInteractionsState extends State<AllInteractions> {
                 {
                   fetchMessengerDetails(widget.groupId);
                 }
+              if(interactedByUserValues!=null)
+                {
+                  interactedByUserFirstName = interactedByUserValues![0]; // First element is the first name
+                  interactedByUserProfileImageUrl = interactedByUserValues[1];
+                }
               print("interactedByUserValues are $interactedByUserValues");
               Map<String, dynamic> seenByMap = data['seenBy'] ?? {};
               Map<String, DateTime> tempSeen = (seenByMap ?? {}).map(
@@ -129,14 +134,7 @@ class _AllInteractionsState extends State<AllInteractions> {
               if (allReplyMessages[presentDocumentId] != null) {
                 data2 = allReplyMessages[presentDocumentId]!;
               }
-              interactedByUserFirstName = interactedByUserValues![0]; // First element is the first name
-              interactedByUserProfileImageUrl = interactedByUserValues[1];
-              // if (interactedByUserValues != null) {
-              //   interactedByUserFirstName = interactedByUserValues[0]; // First element is the first name
-              //   interactedByUserProfileImageUrl = interactedByUserValues[1]; // Second element is the profile image URL
-              // } else {
-              //   print('No values found for the user with UID: $interactedByUserUid');
-              // }
+
               List<String>? interactedWithUserValues = mapOfLists[interactedWithUserId];
               if (interactedWithUserValues != null) {
                 interactedWithUserFirstName = interactedWithUserValues[0]; // First element is the first name
