@@ -14,8 +14,8 @@ import 'image_document_model.dart';
 import 'image_page_view_dialog.dart';
 
 class StatusCollectionWidget extends StatefulWidget {
-  late bool? showOnlyCurrentUserPosts;
-   late List<String> friendsIds;
+  final bool? showOnlyCurrentUserPosts;
+  late List<String> friendsIds;
   final VoidCallback? onUploadStatus;
 
   StatusCollectionWidget({super.key, required this.showOnlyCurrentUserPosts, required this.friendsIds, this.onUploadStatus});
@@ -25,31 +25,31 @@ class StatusCollectionWidget extends StatefulWidget {
 }
 
 class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
+
   late String profileImageUrl = '';
   late String firstName = '';
-  late  List<String> allFriendsIds = widget.friendsIds;
-  bool status=true;
+  late List<String> allFriendsIds = widget.friendsIds;
+  bool status = true;
   late Uint8List _image;
   late Uint8List imageFile;
   late String title;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  User? user=FirebaseAuth.instance.currentUser;
+  User? user = FirebaseAuth.instance.currentUser;
 
   Map<String, DocumentSnapshot> snapshotMap = {};
-
 
   @override
   void initState() {
     fetchFriends();
+    // deleteStatusAfterTimeLimit();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    if(allFriendsIds.isEmpty)
-      {
-        fetchFriends();
-      }
+    if (allFriendsIds.isEmpty) {
+      fetchFriends();
+    }
     if (!snapshotMap.containsKey(user?.uid)) {
       return Row(
         children: [
@@ -89,7 +89,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                       var commentDateTime = DateTime.parse(document?['dateTime'] as String);
                       var difference = now.difference(commentDateTime);
                       if (difference.inHours >= 48) {
-                        deletePost(documentId);
+                        deletePost(document!.id);
                         return Container();
                       } else {}
                       String formattedTime = _formatTimeDifference(difference);
@@ -145,7 +145,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                   var commentDateTime = DateTime.parse(document?['dateTime'] as String);
                   var difference = now.difference(commentDateTime);
                   if (difference.inHours >= 48) {
-                    deletePost(documentId);
+                    deletePost(document!.id);
                     return Container();
                   } else {}
                   String formattedTime = _formatTimeDifference(difference);
@@ -185,7 +185,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     });
   }
 
-   uploadImageAndSaveUrl() async {
+  uploadImageAndSaveUrl() async {
     imageFile = await pickImageFromGallery();
 
     if (imageFile != null) {
@@ -384,14 +384,16 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 10,),
+            const SizedBox(
+              height: 10,
+            ),
             GestureDetector(
               onTap: () async {
                 QuerySnapshot querySnapshot = await FirebaseFirestore.instance
                     .collection('images')
                     .where('userId', isEqualTo: document.userId)
                     .where('status', isEqualTo: true)
-                    .orderBy('dateTime',descending: true)
+                    .orderBy('dateTime', descending: true)
                     .get();
 
                 if (querySnapshot.docs.isNotEmpty) {
@@ -474,9 +476,10 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
   }
 
   Future<void> performQuery() async {
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('images')
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('images')
         .where('status', isEqualTo: true)
-        .where('userId',whereIn: allFriendsIds)
+        .where('userId', whereIn: allFriendsIds)
         .orderBy('dateTime')
         .get();
 
@@ -492,6 +495,7 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
     try {
       await FirebaseFirestore.instance.collection('images').doc(documentId).delete();
       setState(() {
+        performQuery();
       });
     } catch (e) {
       print('Error deleting document: $e');
@@ -507,4 +511,21 @@ class _StatusCollectionWidgetState extends State<StatusCollectionWidget> {
       performQuery();
     }
   }
+
+  // Future<void> deleteStatusAfterTimeLimit() async {
+  //   QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  //       .collection('images')
+  //       .where('status', isEqualTo: true)
+  //       .where('userId', whereIn: allFriendsIds)
+  //       .orderBy('dateTime')
+  //       .get();
+  //   for (var document in querySnapshot.docs) {
+  //     DateTime now = DateTime.now();
+  //     var commentDateTime = DateTime.parse(document['dateTime'] as String);
+  //     var difference = now.difference(commentDateTime);
+  //     if (difference.inHours >= 48) {
+  //       deletePost(document.id);
+  //     }
+  //   }
+  // }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:chewie/chewie.dart';
@@ -22,13 +23,11 @@ class ChatWidget extends StatefulWidget {
   final String? selectedUserDetailsDocumentId;
   final String? groupId;
   final bool? isBlockedByYou;
-  final bool? isVanish;
-  const ChatWidget({
+  const ChatWidget(BuildContext context, {
     super.key,
     this.selectedUserDetailsDocumentData,
     this.selectedUserDetailsDocumentId,
     this.groupId,
-    this.isVanish,
     required this.isBlockedByYou,
   });
 
@@ -55,19 +54,36 @@ class _ChatWidgetState extends State<ChatWidget> {
   late String callBackMessage = "";
   late DocumentSnapshot? callBackSnapshot = null;
   final AudioPlayer audioPlayer = AudioPlayer();
+  String currentUserId = "";
+  late bool isVanish = false;
+  final CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+  late DocumentReference documentReference;
+  late String documentId = "";
+  late String status = "";
+  late StreamSubscription<DocumentSnapshot> _listenerSubscription;
 
   @override
   void initState() {
-    updateMessageSeenStatus();
+    User? user = FirebaseAuth.instance.currentUser;
+    currentUserId = user!.uid;
+    setStatus();
+
+    fetchDocumentId();
+
+    setState(() {
+      currentUserId;
+    });
+    updateMessageSeenStatus(false);
     super.initState();
-    obtainIsVanish();
+    getIsVanish();
   }
 
   @override
   Widget build(BuildContext context) {
+    getIsVanish();
+    updateMessageSeenStatus(false);
+    _isSwitched = isVanish;
     getOppositeBlockList();
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
     if (widget.selectedUserDetailsDocumentData == null) {
       return const SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -138,6 +154,10 @@ class _ChatWidgetState extends State<ChatWidget> {
                             widget.selectedUserDetailsDocumentData!['firstName'] ?? '',
                             style: const TextStyle(fontSize: 20),
                           ),
+                          const SizedBox(
+                            width: 4,
+                          ),
+                          Text(status != '' ? "Active Now" : "Not Active"),
                         ],
                       ),
                     ),
@@ -182,10 +202,12 @@ class _ChatWidgetState extends State<ChatWidget> {
                     children: <Widget>[
                       Switch(
                         value: _isSwitched!,
-                        onChanged: (value) {
+                        onChanged: (value) async {
+                          _isSwitched = value;
+                          await changeVanishState(_isSwitched);
                           setState(() {
-                            _isSwitched = value;
-                            changeVanishState();
+                            _isSwitched;
+                            isVanish = _isSwitched!;
                           });
                         },
                       ),
@@ -199,7 +221,7 @@ class _ChatWidgetState extends State<ChatWidget> {
                   SizedBox(
                     height: 410,
                     child: Center(
-                      child: AllInteractions(
+                      child: AllInteractions(this.context,
                         interactedBy: currentUserId,
                         interactedWith: widget.selectedUserDetailsDocumentId,
                         groupId: widget.groupId,
@@ -277,10 +299,11 @@ class _ChatWidgetState extends State<ChatWidget> {
                                   hintText: 'Enter a message',
                                   border: InputBorder.none,
                                 ),
-                                onSubmitted: (text){sendMessageOrIcon();},
+                                onSubmitted: (text) {
+                                  sendMessageOrIcon();
+                                },
                               ),
                             ),
-
                           ],
                         ),
                       ),
@@ -348,8 +371,6 @@ class _ChatWidgetState extends State<ChatWidget> {
       DateTime now = DateTime.now();
       String? imageUrl = await uploadImageToStorage('postImages/$uuid', image!);
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-      User? user = FirebaseAuth.instance.currentUser;
-      String? currentUserId = user?.uid;
       String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
       await interactionsCollection.add({
         'seenStatus': false,
@@ -454,8 +475,6 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<void> sendMessage(String message) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
     DateTime now = DateTime.now();
     // String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
 
@@ -557,8 +576,6 @@ class _ChatWidgetState extends State<ChatWidget> {
       String? message = await _showVideoPickerDialog(videoUrl);
 
       final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
-      User? user = FirebaseAuth.instance.currentUser;
-      String? currentUserId = user?.uid;
       String groupId = combineIds(currentUserId, widget.selectedUserDetailsDocumentId);
       if (videoUrl != null) {
         await interactionsCollection.add({
@@ -652,9 +669,6 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   void sendMessageOrIcon() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
-
     CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
 
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
@@ -709,13 +723,15 @@ class _ChatWidgetState extends State<ChatWidget> {
     }
   }
 
-  Future<void> updateMessageSeenStatus() async {
+  Future<void> updateMessageSeenStatus(bool bool) async {
     CollectionReference interactions = FirebaseFirestore.instance.collection('interactions');
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
+    String? userIs = currentUserId;
+    if (bool == true) {
+      userIs = widget.selectedUserDetailsDocumentId;
+    }
     QuerySnapshot querySnapshot1 = await interactions
         .where('groupId', isEqualTo: widget.groupId)
-        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedBy', isEqualTo: userIs)
         .where('isVanish', isEqualTo: true)
         .where('seenStatus', isEqualTo: true)
         .get();
@@ -768,9 +784,6 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   Future<void> addAudioToFireStore(String audioUrl) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
-
     CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
 
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
@@ -806,10 +819,7 @@ class _ChatWidgetState extends State<ChatWidget> {
     });
   }
 
-  Future<void> changeVanishState() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
-
+  Future<void> changeVanishState(bool? isSwitched) async {
     CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
 
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
@@ -817,7 +827,10 @@ class _ChatWidgetState extends State<ChatWidget> {
         .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
         .get() as QuerySnapshot<Map<String, dynamic>>;
     DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
-    await doc.reference.update({'isVanish': _isSwitched});
+    String documentId = doc.id;
+    await messageCount.doc(documentId).update({
+      'isVanish': _isSwitched,
+    });
 
     QuerySnapshot<Map<String, dynamic>> querySnapshot2 = await messageCount
         .where('interactedBy', isEqualTo: widget.selectedUserDetailsDocumentId)
@@ -837,24 +850,86 @@ class _ChatWidgetState extends State<ChatWidget> {
   }
 
   void obtainIsVanish() {
-    _isSwitched = widget.isVanish;
+    _isSwitched = isVanish;
     setState(() {
       _isSwitched;
-      print(_isSwitched);
     });
   }
 
   Future<void> fetchCallBackDocument() async {
     DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('interactions').doc(callBackDocumentId).get();
     callBackSnapshot = snapshot;
-    String tempVideoUrl=callBackSnapshot?['videoUrl'];
-    if(tempVideoUrl!="")
-      {
-        print("the video url is :$tempVideoUrl");
-      }
+    String tempVideoUrl = callBackSnapshot?['videoUrl'];
+    if (tempVideoUrl != "") {
+      print("the video url is :$tempVideoUrl");
+    }
     setState(() {
       callBackSnapshot;
-      print("the call back snapshot id is ${callBackSnapshot?.id}");
+    });
+  }
+
+  Future<void> getIsVanish() async {
+    CollectionReference messageCount = FirebaseFirestore.instance.collection('messageCount');
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshot = await messageCount
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .get() as QuerySnapshot<Map<String, dynamic>>;
+    DocumentSnapshot<Map<String, dynamic>> doc = querySnapshot.docs.first;
+    isVanish = doc['isVanish'];
+  }
+
+  Future<void> fetchDocumentId() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .get();
+    documentId = querySnapshot.docs[0].id;
+    print("the documentId is $documentId");
+    documentReference = messageCount.doc(documentId);
+    _listenerSubscription = documentReference.snapshots().listen((DocumentSnapshot snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        setState(() {
+          status = data['status'] ?? '';
+        });
+      } else {
+        setState(() {
+          status = '';
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _listenerSubscription.cancel();
+    setStatusInactive();
+    super.dispose();
+  }
+
+  Future<void> setStatus() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .get();
+    DocumentReference firstDocumentRef = querySnapshot.docs[0].reference;
+    firstDocumentRef.update({
+      'status': 'active',
+    });
+  }
+
+  Future<void> setStatusInactive() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.selectedUserDetailsDocumentId)
+        .get();
+    DocumentReference firstDocumentRef = querySnapshot.docs[0].reference;
+    firstDocumentRef.update({
+      'status': '',
     });
   }
 }

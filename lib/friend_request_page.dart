@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'base_page.dart';
 import 'home/show_user_details_page.dart';
 
@@ -58,10 +57,7 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                   String documentId = snapshot.data!.docs[index].id;
 
                   return FutureBuilder<DocumentSnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(document['requestedBy'])
-                        .get(),
+                    future: FirebaseFirestore.instance.collection('users').doc(document['requestedBy']).get(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const CircularProgressIndicator();
@@ -75,11 +71,10 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                       }
 
                       DocumentSnapshot requesterInfo = snapshot.data!;
-                      String profileImageUrl="";
-                      if(requesterInfo['profileImageUrl']!=null)
-                        {
-                          profileImageUrl=requesterInfo['profileImageUrl'];
-                        }
+                      String profileImageUrl = "";
+                      if (requesterInfo['profileImageUrl'] != null) {
+                        profileImageUrl = requesterInfo['profileImageUrl'];
+                      }
                       return SizedBox(
                         height: 80,
                         child: Row(
@@ -89,10 +84,9 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        ShowUserDetailsPage(
-                                          userId: document['requestedBy'],
-                                        ),
+                                    builder: (context) => ShowUserDetailsPage(
+                                      userId: document['requestedBy'],
+                                    ),
                                   ),
                                 );
                               },
@@ -124,8 +118,16 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
                                 ],
                               ),
                             ),
-                            ElevatedButton(onPressed: (){acceptRequest(requesterInfo.id);}, child: const Text("Accept")),
-                            ElevatedButton(onPressed: () {rejectRequest(requesterInfo.id);}, child: const Text("Reject")),
+                            ElevatedButton(
+                                onPressed: () {
+                                  acceptRequest(requesterInfo.id);
+                                },
+                                child: const Text("Accept")),
+                            ElevatedButton(
+                                onPressed: () {
+                                  rejectRequest(requesterInfo.id);
+                                },
+                                child: const Text("Reject")),
                           ],
                         ),
                       );
@@ -145,35 +147,31 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
     var requestedTo = user!.uid;
     var requestedBy = id;
 
-    CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: requestedTo)
+        .where('interactedTo', isEqualTo: requestedBy)
+        .get();
 
-    // Data to be added to the document
-    Map<String, dynamic> data = {
-      'count': 0,
-      'interactedBy': requestedTo,
-      'interactedTo': requestedBy,
-      'isVanish': false,
-    };
-
-    // Add a new document with an auto-generated ID
-    await messages.add(data);
+    if (querySnapshot.docs.isEmpty) {
+      CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
+      Map<String, dynamic> data = {
+        'count': 0,
+        'interactedBy': requestedTo,
+        'interactedTo': requestedBy,
+        'isVanish': false,
+        'status':"",
+      };
+      await messages.add(data);
+    }
 
     var requestId = createRequestId(requestedBy, requestedTo);
-    CollectionReference friendRequests =
-    FirebaseFirestore.instance.collection('friendRequests');
+    CollectionReference friendRequests = FirebaseFirestore.instance.collection('friendRequests');
 
-    friendRequests
-        .where('requestId', isEqualTo: requestId)
-        .get()
-        .then((QuerySnapshot querySnapshot) {
-
-
+    friendRequests.where('requestId', isEqualTo: requestId).get().then((QuerySnapshot querySnapshot) {
       for (var document in querySnapshot.docs) {
         friendRequests.doc(document.id).delete().then((_) {
-
-
           print('Accepted request and deleted request: ${document.id}');
-
 
           DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(requestedTo);
           userDoc.get().then((DocumentSnapshot userSnapshot) {
@@ -187,9 +185,10 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
 
               userDoc.set({'friends': friendsList}, SetOptions(merge: true));
             } else {
-              userDoc.set({'friends': [requestedBy]});
+              userDoc.set({
+                'friends': [requestedBy]
+              });
             }
-
           }).catchError((e) {
             print('Error getting user document: $e');
           });
@@ -205,26 +204,21 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
 
               usersDoc.set({'friends': friendsList}, SetOptions(merge: true));
             } else {
-              usersDoc.set({'friends': [requestedTo]});
+              usersDoc.set({
+                'friends': [requestedTo]
+              });
             }
-
-
-
           }).catchError((e) {
             print('Error getting user document: $e');
           });
-        }
-
-        ).catchError((e) {
+        }).catchError((e) {
           print('Error deleting friend request: $e');
         });
       }
-    }
-    ).catchError((e) {
+    }).catchError((e) {
       print('Error getting friend request documents: $e');
     });
   }
-
 
   String createRequestId(String requestedBy, String requestedTo) {
     return combineIds(requestedBy, requestedTo);
@@ -236,32 +230,17 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
       var requestedTo = user!.uid;
       var requestedBy = id;
       var requestId = createRequestId(requestedBy, requestedTo);
-      CollectionReference friendRequests =
-      FirebaseFirestore.instance.collection('friendRequests');
+      CollectionReference friendRequests = FirebaseFirestore.instance.collection('friendRequests');
 
-      friendRequests
-          .where('requestId', isEqualTo: requestId)
-          .get()
-          .then((QuerySnapshot querySnapshot) {
-
-
-        querySnapshot.docs.forEach((QueryDocumentSnapshot document)
-        {
+      friendRequests.where('requestId', isEqualTo: requestId).get().then((QuerySnapshot querySnapshot) {
+        querySnapshot.docs.forEach((QueryDocumentSnapshot document) {
           friendRequests.doc(document.id).delete().then((_) {
-
-
             print('Rejected request and deleted request: ${document.id}');
-
-          }
-
-          ).catchError((e) {
+          }).catchError((e) {
             print('Error deleting friend request: $e');
           });
-        }
-
-        );
-      }
-      ).catchError((e) {
+        });
+      }).catchError((e) {
         print('Error getting friend request documents: $e');
       });
     }

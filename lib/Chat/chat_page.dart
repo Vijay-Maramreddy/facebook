@@ -23,8 +23,7 @@ class _ChatPageState extends State<ChatPage> {
   int counter = 0;
   int? value=0;
 
-  Map<String, List<dynamic>> resultMap = {};
-  bool isVanish = false;
+  Map<String, int> resultMap = {};
   List<String> blockedList = [];
   List<String> groupUids = [];
   List<List<dynamic>> groupsInfo = [];
@@ -32,6 +31,7 @@ class _ChatPageState extends State<ChatPage> {
   String? clickedGroupId = "";
   List<dynamic> selectedGroupDocument = [];
   late String currentUserEmail = "";
+  List<String> usersInteractedWith=[];
 
   @override
   void initState() {
@@ -39,6 +39,7 @@ class _ChatPageState extends State<ChatPage> {
       allUsersSnapshot = getUsers();
       getGroups();
       retrieveFieldValues();
+      getMessagingList();
       getBlockedList();
     });
     super.initState();
@@ -131,27 +132,24 @@ class _ChatPageState extends State<ChatPage> {
                                         User? user = FirebaseAuth.instance.currentUser;
                                         String? currentUserId = user?.uid;
                                         String? interactedTo = allUsersQuerySnapshot.docs[index].id;
-                                        List? list1 = resultMap[interactedTo];
-                                        value = list1?[0]??0;
-                                        if (key == currentUserId) {
+                                        value = resultMap[interactedTo];
+                                        if (key == currentUserId || !usersInteractedWith.contains(key)) {
                                           return Container();
                                         }
                                         return Padding(
                                           padding: const EdgeInsets.all(10),
                                           child: ElevatedButton(
                                             onPressed: () {
+                                              retrieveFieldValues;
                                               String? interactedBy = currentUserId;
                                               String? interactedTo = allUsersQuerySnapshot.docs[index].id;
-                                              List? list1 = resultMap[interactedTo];
-                                              value = list1?[0]??0;
+                                              value = resultMap[interactedTo];
                                               updateOrAddInteraction(interactedBy!, interactedTo);
                                               groupId = createGroupId(allUsersQuerySnapshot.docs[index].id);
                                               selectedUserDetailsDocumentData = allUsersQuerySnapshot.docs[index].data();
                                               selectedUserDetailsDocumentId = allUsersQuerySnapshot.docs[index].id;
                                               deletedMessageCount(interactedBy, interactedTo);
-                                              isVanish = list1![1];
-                                              print("isVanish is $isVanish");
-                                              resultMap[selectedUserDetailsDocumentId!] = [0, list1?[1]];
+                                              resultMap[selectedUserDetailsDocumentId!] = 0;
                                               isGroup = false;
                                               setState(() {
                                                 interactedTo;
@@ -160,7 +158,6 @@ class _ChatPageState extends State<ChatPage> {
                                                 groupId;
                                                 selectedUserDetailsDocumentData;
                                                 selectedUserDetailsDocumentId;
-                                                isVanish;
                                                 resultMap[selectedUserDetailsDocumentId!];
                                                 isGroup;
                                               });
@@ -266,7 +263,6 @@ class _ChatPageState extends State<ChatPage> {
                                   String name = groupData[0];
                                   String profileImageUrl = groupData[1];
                                   clickedGroupId = groupData[2]!;
-                                  int unSeenCount = groupData[3];
                                   return Padding(
                                     padding: const EdgeInsets.all(10),
                                     child: ElevatedButton(
@@ -347,12 +343,11 @@ class _ChatPageState extends State<ChatPage> {
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
                     width: 1100,
-                    child: ChatWidget(
+                    child: ChatWidget(this.context,
                       selectedUserDetailsDocumentData: selectedUserDetailsDocumentData,
                       selectedUserDetailsDocumentId: selectedUserDetailsDocumentId,
                       groupId: groupId,
                       isBlockedByYou: blockedList.contains(selectedUserDetailsDocumentId),
-                      isVanish: isVanish,
                     ),
                   ),
                 ),
@@ -437,8 +432,7 @@ class _ChatPageState extends State<ChatPage> {
         if (document.data()['interactedTo'] == currentUserId) {
           String uid = document.data()['interactedBy']; // Document UID
           int count = document.data()['count'];
-          bool tempIsVanish = document.data()['isVanish']??false;
-          resultMap[uid] = [count, tempIsVanish];
+          resultMap[uid] = count;
         }
       }
       setState(() {
@@ -482,4 +476,27 @@ class _ChatPageState extends State<ChatPage> {
       }
     }
   }
+
+  Future<void> getMessagingList() async {
+    User? user=FirebaseAuth.instance.currentUser;
+
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: user?.uid)
+        .get();
+
+   for(QueryDocumentSnapshot document in querySnapshot.docs)
+     {
+        var data=document.data() as Map<String, dynamic>; 
+        String interactedTo=data['interactedTo'];
+        usersInteractedWith.add(interactedTo);
+     }
+   setState(() {
+     usersInteractedWith;
+   });
+  }
+
+  // @override
+  // void dispose(){
+  // }
 }

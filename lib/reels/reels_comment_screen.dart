@@ -25,6 +25,7 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
   late String profileImageUrl;
   late String firstName;
   Map<String, List<String>> replies = {};
+  User? user = FirebaseAuth.instance.currentUser;
 
   String _formatTimeDifference(Duration difference) {
     if (difference.inMinutes < 60) {
@@ -41,28 +42,20 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
       return; // Check if the widget is still mounted
     }
     String comment = _commentController.text;
-
-    User? user = FirebaseAuth.instance.currentUser;
-    String? userId = user?.uid;
-    DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-
+    String? currentUserId = user?.uid;
+    DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
     if (userSnapshot.exists) {
       Map<String, dynamic> userData = userSnapshot.data()!;
-
       profileImageUrl = userData['profileImageUrl'];
       firstName = userData['firstName'];
     } else {
-      print('User with UID $userId not found.');
+      print('User with UID $currentUserId not found.');
     }
-    // Get the current date and time
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
-
-    DocumentSnapshot<Map<String, dynamic>> documentSnapshot = await FirebaseFirestore.instance.collection('reels').doc(widget.reelDocumentId).get();
-
     CollectionReference reelsCollection = FirebaseFirestore.instance.collection('reelsComments');
     await reelsCollection.add({
-      'commentedBy': userId,
+      'commentedBy': currentUserId,
       'commentedTo': widget.reelCreatorId,
       'reelId': widget.reelDocumentId,
       'comment': comment,
@@ -71,8 +64,33 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
       'profileImageUrl': profileImageUrl,
       'replies': replies,
     });
-
     _commentController.clear();
+
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: widget.reelCreatorId)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
+      Map<String, dynamic> data1 = {
+        'count': 0,
+        'interactedBy': currentUserId,
+        'interactedTo': widget.reelCreatorId,
+        'isVanish': false,
+        'status': "",
+      };
+      await messages.add(data1);
+      Map<String, dynamic> data2 = {
+        'count': 0,
+        'interactedBy': widget.reelCreatorId,
+        'interactedTo': currentUserId,
+        'isVanish': false,
+      };
+      await messages.add(data2);
+    }
+
   }
 
   @override
@@ -103,7 +121,6 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
                       ),
                       onSubmitted: (String text) {
                         _saveComment();
-                        // Navigator.pop(context);
                       },
                     ),
                   ),
@@ -113,7 +130,6 @@ class _ReelsCommentInputSheetState extends State<ReelsCommentInputSheet> {
                   icon: const Icon(Icons.send),
                   onPressed: () {
                     _saveComment();
-                    // Navigator.pop(context);
                   },
                 ),
               ],
@@ -150,10 +166,6 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
   late String currentUserName = '';
   late String currentUserProfileImage='';
 
-  // late String? commentId = widget.reelDocumentId;
-  // late String? reelDocumentId;
-  // CommentDisplayWidget({required this.reelDocumentId});
-
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -177,8 +189,6 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
               itemBuilder: (context, index) {
                 DocumentSnapshot<Map<String, dynamic>> commentDoc = snapshot.data!.docs[index];
                 Map<String, dynamic> commentData = commentDoc.data() as Map<String, dynamic>;
-                // Display all fields of the document
-
                 return Container(
                     padding: const EdgeInsets.all(8.0),
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -330,15 +340,11 @@ class _CommentDisplayWidgetState extends State<CommentDisplayWidget> {
                       ElevatedButton(
                         onPressed: () {
                           setState(() {
-                            // showReplies=true;
-                            // Create a TextEditingController for this comment's reply
                             _replyControllers[commentDoc.id] = TextEditingController();
                           });
                         },
                         child: const Text('Reply'),
                       ),
-
-                      // Display the reply text field when the button is pressed
                       if (_replyControllers[commentDoc.id] != null)
                         Column(
                           children: [

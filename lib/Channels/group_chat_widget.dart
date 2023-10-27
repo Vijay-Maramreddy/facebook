@@ -11,7 +11,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
@@ -19,7 +18,8 @@ import 'package:video_player/video_player.dart';
 import '../Chat/all_interactions.dart';
 import '../app_style.dart';
 import '../base_page.dart';
-late DocumentSnapshot? callBackSnapshot=null;
+
+late DocumentSnapshot? callBackSnapshot = null;
 
 class GroupChatWidget extends StatefulWidget {
   final String? clickedGroupId;
@@ -46,8 +46,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
   bool isGroup = true;
   Map<String, DateTime> seenBy = {};
   bool isreply = false;
-  late bool isReply=false;
-  late String callBackDocumentId="";
+  late bool isReply = false;
+  late String callBackDocumentId = "";
   final AudioPlayer audioPlayer = AudioPlayer();
 
   @override
@@ -143,6 +143,22 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                     });
                   },
                   child: const Text("Show Videos")),
+              const SizedBox(width: 4),
+              Expanded(
+                child: TextField(
+                  onChanged: (value) {
+                    setState(() {
+                      text = value; // Update the string variable as text changes
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           Column(
@@ -150,17 +166,19 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
               SizedBox(
                 height: 430,
                 child: Center(
-                  child: AllInteractions(
-                      interactedBy: currentUserId,
-                      interactedWith: widget.clickedGroupId,
-                      groupId: widget.clickedGroupId,
-                      oppositeBlocked: const [],
-                      youBlocked: false,
-                      string: text,
-                      media: media, updateState:updateState,),
+                  child: AllInteractions(this.context,
+                    interactedBy: currentUserId,
+                    interactedWith: widget.clickedGroupId,
+                    groupId: widget.clickedGroupId,
+                    oppositeBlocked: const [],
+                    youBlocked: false,
+                    string: text,
+                    media: media,
+                    updateState: updateState,
+                  ),
                 ),
               ),
-              if(callBackSnapshot!=null)
+              if (callBackSnapshot != null)
                 Container(
                   height: 80,
                   margin: const EdgeInsets.all(2.0),
@@ -177,7 +195,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                           AudioMessageWidget(audioUrl: callBackSnapshot?['audioUrl'], audioPlayer: audioPlayer)
                         else if (callBackSnapshot?['videoUrl'] != "" && callBackSnapshot?['videoUrl'] != null)
                           SizedBox(
-                            child:Text(callBackSnapshot?['message']),
+                            child: Text(callBackSnapshot?['message']),
                           )
                         else if (callBackSnapshot?['imageUrl'] == "" && callBackSnapshot?['videoUrl'] == "")
                           if (callBackSnapshot?['message']!.startsWith('https://'))
@@ -193,10 +211,10 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                             child: buildImage(callBackSnapshot?['imageUrl'], callBackSnapshot?['message']),
                           ),
                         IconButton(
-                          onPressed:(){
+                          onPressed: () {
                             setState(() {
-                              callBackSnapshot=null;
-                              callBackDocumentId="";
+                              callBackSnapshot = null;
+                              callBackDocumentId = "";
                             });
                           },
                           icon: const Icon(Icons.cancel),
@@ -210,7 +228,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                   decoration: customBoxDecoration,
                   margin: const EdgeInsets.all(10),
                   alignment: Alignment.center,
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10,0),
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                   width: 700,
                   // height: 45,
                   child: Row(
@@ -223,10 +241,11 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                             hintText: 'Enter a message',
                             // border: InputBorder.none,
                           ),
-                          onSubmitted: (text){sendMessageOrIcon();},
+                          onSubmitted: (text) {
+                            sendMessageOrIcon();
+                          },
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -254,7 +273,6 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
                   },
                   icon: const Icon(Icons.video_library),
                 ),
-
                 IconButton(
                   onPressed: () async {
                     await sendMessageWithLocation();
@@ -373,8 +391,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       increaseMessageCount();
 
       setState(() {
-        callBackDocumentId="";
-        callBackSnapshot=null;
+        callBackDocumentId = "";
+        callBackSnapshot = null;
       }); // Clear the text field after sending the message
     }
   }
@@ -469,8 +487,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         'replyTo': callBackDocumentId,
       });
       setState(() {
-        callBackDocumentId="";
-        callBackSnapshot=null;
+        callBackDocumentId = "";
+        callBackSnapshot = null;
       });
     } else {
       print('No image picked.');
@@ -572,8 +590,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
         });
       }
       setState(() {
-        callBackDocumentId="";
-        callBackSnapshot=null;
+        callBackDocumentId = "";
+        callBackSnapshot = null;
       });
     } else {
       print('No video picked.');
@@ -605,7 +623,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       print('Unable to retrieve location.');
     }
     setState(() {
-      callBackSnapshot=null;
+      callBackSnapshot = null;
     });
   }
 
@@ -635,8 +653,8 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
     // Clear the text field after sending the message
     _messageController.clear();
     setState(() {
-      callBackDocumentId="";
-      callBackSnapshot=null;
+      callBackDocumentId = "";
+      callBackSnapshot = null;
     });
   }
 
@@ -759,24 +777,24 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
       'replyTo': callBackDocumentId,
     });
     setState(() {
-      callBackSnapshot=null;
-      callBackDocumentId="";
+      callBackSnapshot = null;
+      callBackDocumentId = "";
     });
     increaseMessageCount();
   }
 
   void updateState(String documentId) {
-    callBackDocumentId=documentId;
+    callBackDocumentId = documentId;
     fetchCallBackDocument();
     setState(() {
       callBackDocumentId;
-      isReply=true;
+      isReply = true;
     });
   }
 
   Future<void> fetchCallBackDocument() async {
     DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('interactions').doc(callBackDocumentId).get();
-    callBackSnapshot=snapshot;
+    callBackSnapshot = snapshot;
     setState(() {
       callBackSnapshot;
       print("the call back snapshot id is ${callBackSnapshot?.id}");

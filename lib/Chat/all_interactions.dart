@@ -21,7 +21,7 @@ class AllInteractions extends StatefulWidget {
   late String? string;
   late String? media;
   final StringCallback updateState;
-  AllInteractions({
+  AllInteractions(BuildContext context, {
     super.key,
     required this.interactedBy,
     required this.interactedWith,
@@ -43,19 +43,18 @@ class _AllInteractionsState extends State<AllInteractions> {
   String interactedWithUserFirstName = "";
   String interactedByUserProfileImageUrl = "assets/profilelogo.png";
   late List<String> data2 = [];
-
   late DateTime startDate = DateTime.now();
-
   final AudioPlayer audioPlayer = AudioPlayer();
   Map<String, DateTime> seenBy = {};
   Map<String, List<String>> allReplyMessages = {};
   bool loaded=false;
+
+
   // StreamSubscription<QuerySnapshot>? chatSubscription;
   @override
   void initState() {
-
-    fetchMessengerDetails(widget.groupId);
     fetchAllReplyMessages();
+    fetchMessengerDetails(widget.groupId);
     // setupChatListener();
 
     super.initState();
@@ -114,7 +113,6 @@ class _AllInteractionsState extends State<AllInteractions> {
               String presentDocumentId = snapshot.data!.docs[index].id;
               Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               String interactedByUserUid = data['interactedBy'];
-              print("interactedByUserUid is $interactedByUserUid");
               String interactedWithUserId = data['interactedWith'];
               List<String>? interactedByUserValues = mapOfLists[interactedByUserUid];
               if(interactedByUserValues==null)
@@ -123,10 +121,10 @@ class _AllInteractionsState extends State<AllInteractions> {
                 }
               if(interactedByUserValues!=null)
                 {
+                  // fetchMessengerDetails(widget.groupId);
                   interactedByUserFirstName = interactedByUserValues![0]; // First element is the first name
                   interactedByUserProfileImageUrl = interactedByUserValues[1];
                 }
-              print("interactedByUserValues are $interactedByUserValues");
               Map<String, dynamic> seenByMap = data['seenBy'] ?? {};
               Map<String, DateTime> tempSeen = (seenByMap ?? {}).map(
                 (key, value) => MapEntry(key, (value as Timestamp).toDate()),
@@ -135,6 +133,12 @@ class _AllInteractionsState extends State<AllInteractions> {
                 data2 = allReplyMessages[presentDocumentId]!;
               }
 
+              // if (interactedByUserValues != null) {
+              //   interactedByUserFirstName = interactedByUserValues[0]; // First element is the first name
+              //   interactedByUserProfileImageUrl = interactedByUserValues[1]; // Second element is the profile image URL
+              // } else {
+              //   print('No values found for the user with UID: $interactedByUserUid');
+              // }
               List<String>? interactedWithUserValues = mapOfLists[interactedWithUserId];
               if (interactedWithUserValues != null) {
                 interactedWithUserFirstName = interactedWithUserValues[0]; // First element is the first name
@@ -583,7 +587,6 @@ class _AllInteractionsState extends State<AllInteractions> {
     setState(() {
       startDate;
     });
-    print("the groupmembers are :$userMembers");
     CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
 
     for (String userMember in userMembers) {
@@ -600,7 +603,6 @@ class _AllInteractionsState extends State<AllInteractions> {
     if (mounted) {
       setState(() {
         mapOfLists;
-        print("the total values are :$mapOfLists");
       });
     }
   }
@@ -625,7 +627,6 @@ class _AllInteractionsState extends State<AllInteractions> {
     if (mounted) {
       setState(() {
         allReplyMessages;
-        // print(allReplyMessages);
       });
     }
   }
@@ -768,12 +769,11 @@ class _AllInteractionsState extends State<AllInteractions> {
     );
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    mapOfLists={};
 
 
-
-  }
+  // @override
+  // void dispose() {
+  //   super.dispose();
+  //   mapOfLists={};
+  // }
 }

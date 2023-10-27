@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,12 +24,11 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
   List<Comment> _comments = [];
   late String profileImageUrl;
   late String firstName;
-  late bool commentsVisible=true;
-
+  late bool commentsVisible = true;
+  String? currentUserId = "";
 
   Future<void> _fetchComments() async {
-    QuerySnapshot<Map<String, dynamic>> commentSnapshot =
-    await FirebaseFirestore.instance
+    QuerySnapshot<Map<String, dynamic>> commentSnapshot = await FirebaseFirestore.instance
         .collection('images')
         .doc(widget.documentsId)
         .collection('comments')
@@ -37,15 +38,13 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     commentsVisible = await isCommentsVisible(widget.documentsId);
 
     setState(() {
-
-
       _comments = commentSnapshot.docs.map((doc) {
         var commentDateTime = DateTime.parse(doc['dateTime'] as String);
         var difference = now.difference(commentDateTime);
         String formattedTime = _formatTimeDifference(difference);
 
         return Comment(
-          imageId:widget.documentsId!,
+          imageId: widget.documentsId!,
           documentId: doc.id, // Pass the document ID
           comment: doc['comment'] as String,
           userId: doc['userId'] as String,
@@ -56,7 +55,6 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       }).toList();
     });
   }
-
 
   String _formatTimeDifference(Duration difference) {
     if (difference.inMinutes < 60) {
@@ -69,56 +67,72 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
   }
 
   void _saveComment() async {
-    if (!mounted) {
-      return; // Check if the widget is still mounted
+    DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).get();
+    ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
+
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: currentUserId)
+        .where('interactedTo', isEqualTo: retrievedDoc.userId)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
+      Map<String, dynamic> data1 = {
+        'count': 0,
+        'interactedBy': currentUserId,
+        'interactedTo': retrievedDoc.userId,
+        'isVanish': false,
+        'status': "",
+      };
+      await messages.add(data1);
+      Map<String, dynamic> data2 = {
+        'count': 0,
+        'interactedBy': retrievedDoc.userId,
+        'interactedTo': currentUserId,
+        'isVanish': false,
+      };
+      await messages.add(data2);
     }
+
     String comment = _commentController.text;
-    User? user = FirebaseAuth.instance.currentUser;
-    String? userId = user?.uid;
-    DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+    DocumentSnapshot<Map<String, dynamic>> userSnapshot = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
 
     if (userSnapshot.exists) {
       Map<String, dynamic> userData = userSnapshot.data()!;
       profileImageUrl = userData['profileImageUrl'];
       firstName = userData['firstName'];
-
-      print('Profile Image URL: $profileImageUrl');
-      print('First Name: $firstName');
-      print(widget.documentsId);
     } else {
-      print('User with UID $userId not found.');
+      print('User with UID $currentUserId not found.');
     }
     DateTime now = DateTime.now();
     String formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(now);
     Map<String, dynamic> commentData = {
       'comment': comment,
-      'userId': userId,
+      'userId': currentUserId,
       'profileImageUrl': profileImageUrl,
       'firstName': firstName,
       'dateTime': formattedDateTime,
     };
 
-
-    DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).get();
-    ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-
-    String groupId=combineIds(userId,retrievedDoc.userId);
+    String groupId = combineIds(currentUserId, retrievedDoc.userId);
 
     final CollectionReference interactionsCollection = FirebaseFirestore.instance.collection('interactions');
     await interactionsCollection.add({
-      'interactedBy': userId,
-      'interactedWith':retrievedDoc.userId,
-      'imageUrl':retrievedDoc.imageUrl,
-      'message':comment,
-      'groupId':groupId,
+      'interactedBy': currentUserId,
+      'interactedWith': retrievedDoc.userId,
+      'imageUrl': retrievedDoc.imageUrl,
+      'message': comment,
+      'groupId': groupId,
       'dateTime': DateTime.now(),
       'seenStatus': false,
       'baseText': "",
       'videoUrl': '',
       'audioUrl': '',
       'visibility': true,
-      'seenBy':{},
-      'isVanish':false,
+      'seenBy': {},
+      'isVanish': false,
     });
 
     await FirebaseFirestore.instance
@@ -135,7 +149,7 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
 
     _comments.add(Comment(
       comment: comment,
-      userId: userId!,
+      userId: currentUserId!,
       profileImageUrl: profileImageUrl,
       firstName: firstName,
       dateTime: formattedDateTime,
@@ -145,24 +159,25 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
     _commentController.clear();
     if (mounted) {
       Navigator.pop(context); // Close the bottom sheet after saving
-    }// Close the bottom sheet after saving
+    } // Close the bottom sheet after saving
   }
 
   @override
   void initState() {
     super.initState();
+    User? user = FirebaseAuth.instance.currentUser;
+    currentUserId = user?.uid;
     _fetchComments(); // Fetch comments when the widget is initialized
   }
 
   @override
   Widget build(BuildContext context) {
-
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: Container(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,  // Set to MainAxisSize.min
+          mainAxisSize: MainAxisSize.min, // Set to MainAxisSize.min
           children: [
             // TextField(
             //   controller: _commentController,
@@ -184,7 +199,7 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
               ),
             ),
             SizedBox(
-              height: 100,  // Set a fixed height for the emoji picker
+              height: 100, // Set a fixed height for the emoji picker
               child: Row(
                 children: [
                   Expanded(
@@ -216,7 +231,7 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
               ),
             ),
             SizedBox(
-              height: 300,  // Set a fixed height for the emoji picker
+              height: 300, // Set a fixed height for the emoji picker
               child: EmojiPicker(
                 onEmojiSelected: (category, emoji) {
                   setState(() {
@@ -230,21 +245,16 @@ class _CommentInputSheetState extends State<CommentInputSheet> {
       ),
     );
   }
+
   isCommentsVisible(String? documentsId) async {
     DocumentSnapshot imageSnapshot = await FirebaseFirestore.instance.collection('images').doc(widget.documentsId).get();
     ImageDocument retrievedDoc = ImageDocument.fromSnapshot(imageSnapshot);
-    bool status=retrievedDoc.status;
-    User? user = FirebaseAuth.instance.currentUser;
-    String? currentUserId = user?.uid;
-    if(status==true && retrievedDoc.userId!=currentUserId){
-      print("This is the Status :$status");
-      String retrievedDocUser=retrievedDoc.userId;
-      print("this is retrieved doc userId :$retrievedDocUser and currentuser is $currentUserId");
+    bool status = retrievedDoc.status;
+    if (status == true && retrievedDoc.userId != currentUserId) {
+      String retrievedDocUser = retrievedDoc.userId;
       return false;
-    }
-    else {
+    } else {
       return true;
     }
   }
 }
-

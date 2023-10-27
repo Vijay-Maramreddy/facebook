@@ -1,3 +1,4 @@
+import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -439,16 +440,24 @@ class _ShowUserDetailsPageState extends State<ShowUserDetailsPage> {
     requestedBy = user!.uid;
     requestedTo = widget.userId!;
 
-    CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
-    Map<String, dynamic> data = {
-      'count': 0,
-      'interactedBy': requestedBy,
-      'interactedTo': requestedTo,
-      'isVanish': false,
-    };
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messageCount')
+        .where('interactedBy', isEqualTo: requestedBy)
+        .where('interactedTo',isNotEqualTo:requestedTo )
+        .get();
 
-    // Add a new document with an auto-generated ID
-    await messages.add(data);
+    if(querySnapshot.docs.isEmpty)
+    {
+      CollectionReference messages = FirebaseFirestore.instance.collection('messageCount');
+      Map<String, dynamic> data = {
+        'count': 0,
+        'interactedBy': requestedBy,
+        'interactedTo': requestedTo,
+        'isVanish': false,
+        'status':"",
+      };
+      await messages.add(data);
+    }
 
     friendStatus = false;
     requestStatus = true;
